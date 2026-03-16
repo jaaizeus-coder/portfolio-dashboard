@@ -452,6 +452,40 @@ main{padding:18px 24px 32px;max-width:1600px;margin:0 auto}
 @media(max-width:768px){.feature-row{grid-template-columns:1fr}}
 
 /* ══════════════════════════════════════════════
+   INDUSTRY TAB
+══════════════════════════════════════════════ */
+.peer-card{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:14px;padding:18px;
+  transition:all 0.22s;cursor:pointer;position:relative;overflow:hidden;
+}
+.peer-card:hover{border-color:var(--border2);transform:translateY(-2px);box-shadow:0 8px 36px rgba(0,0,0,0.45)}
+.peer-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.peer-ntrs::before{background:linear-gradient(90deg,#3b82f6,#6366f1)}
+.peer-bk::before{background:linear-gradient(90deg,#a855f7,#ec4899)}
+.peer-stt::before{background:linear-gradient(90deg,#14b8a6,#22c55e)}
+.peer-gs::before{background:linear-gradient(90deg,#f59e0b,#f97316)}
+.peer-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px}
+.peer-sym{font-size:1.1rem;font-weight:900;color:#fff;letter-spacing:-0.3px}
+.peer-name{font-size:0.62rem;color:var(--text3);margin-top:2px;font-weight:500;max-width:140px;line-height:1.3}
+.peer-price{font-size:1.22rem;font-weight:800;color:#fff;line-height:1;text-align:right}
+.peer-chg{font-size:0.76rem;font-weight:700;margin-top:3px;text-align:right}
+.peer-stats{display:grid;grid-template-columns:1fr 1fr;gap:5px;font-size:0.63rem;color:var(--text3);margin:8px 0}
+.peer-stats strong{color:var(--text);font-weight:600}
+.peer-divider{height:1px;background:var(--border);margin:10px 0 8px}
+.peer-pt-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:0.68rem}
+.peer-pt-label{color:var(--text3);font-weight:600;flex-shrink:0;width:52px}
+.peer-pt-track{flex:1;height:5px;background:rgba(255,255,255,0.06);border-radius:4px;position:relative}
+.peer-pt-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--blue),var(--purple))}
+.peer-pt-val{color:var(--text);font-weight:700;flex-shrink:0;width:46px;text-align:right}
+.peer-upside{font-size:0.68rem;font-weight:700;padding:3px 10px;border-radius:8px;border:1px solid;display:inline-block;margin-bottom:8px}
+.peer-news-item{padding:5px 0;border-bottom:1px solid rgba(22,32,56,0.7);font-size:0.68rem;line-height:1.4;display:flex;gap:6px;align-items:flex-start}
+.peer-news-item:last-child{border-bottom:none;padding-bottom:0}
+.peer-news-dot{color:var(--blue);font-size:0.52rem;margin-top:4px;flex-shrink:0}
+.peer-news-item a{color:#93c5fd;text-decoration:none;flex:1}
+.peer-news-item a:hover{color:#fff}
+
+/* ══════════════════════════════════════════════
    MACRO TAB
 ══════════════════════════════════════════════ */
 .sector-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:9px;margin-bottom:16px}
@@ -574,6 +608,7 @@ main{padding:18px 24px 32px;max-width:1600px;margin:0 auto}
   <button class="nav-btn" data-view="heatmap">🌡️ Heat Map</button>
   <button class="nav-btn" data-view="earnings">📅 Earnings</button>
   <button class="nav-btn" data-view="macro">⚡ Macro</button>
+  <button class="nav-btn" data-view="industry">🏦 Industry</button>
   <button class="nav-btn" data-view="news">📰 News</button>
 </nav>
 
@@ -845,6 +880,70 @@ main{padding:18px 24px 32px;max-width:1600px;margin:0 auto}
   </div>
 </div>
 
+<!-- ══ INDUSTRY ══ -->
+<div id="view-industry" class="hidden">
+  <div class="glass-card" style="margin-bottom:16px;margin-top:4px">
+    <div style="display:flex;gap:12px;align-items:flex-start">
+      <div style="font-size:1.7rem;flex-shrink:0">🏦</div>
+      <div>
+        <div style="font-size:0.88rem;font-weight:700;color:#fff;margin-bottom:4px">Northern Trust &amp; Peers — Custody &amp; Asset Servicing</div>
+        <div style="font-size:0.73rem;color:var(--text2);line-height:1.6">Tracking <strong style="color:var(--blue2)">NTRS</strong> (Northern Trust) vs <strong style="color:var(--purple2)">BK</strong> (BNY Mellon) · <strong style="color:var(--teal2)">STT</strong> (State Street) · <strong style="color:var(--yellow2)">GS</strong> (Goldman Sachs). Real-time quotes, analyst ratings, EPS comparisons, and relative performance.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Peer KPI row -->
+  <div class="kpi-row" id="industry-kpi-row">
+    <div class="loading-wrap" style="grid-column:1/-1;padding:18px"><div class="spinner"></div></div>
+  </div>
+
+  <!-- Peer performance chart -->
+  <div class="card" style="margin-bottom:13px">
+    <div class="flex-between" style="margin-bottom:13px">
+      <div>
+        <div class="card-title">Peer Performance — Normalized</div>
+        <div class="card-sub">NTRS · BK · STT · GS indexed to 0% at period start</div>
+      </div>
+      <div class="range-selector" id="industry-perf-range">
+        <button class="range-btn active" data-range="1W">1W</button>
+        <button class="range-btn" data-range="1M">1M</button>
+        <button class="range-btn" data-range="3M">3M</button>
+        <button class="range-btn" data-range="YTD">YTD</button>
+      </div>
+    </div>
+    <div class="chart-wrap h300"><canvas id="industryPerfChart"></canvas></div>
+  </div>
+
+  <!-- Analyst + EPS side-by-side -->
+  <div class="g2" style="margin-bottom:13px">
+    <div class="card">
+      <div class="card-title">Analyst Consensus — Peer Comparison</div>
+      <div class="card-sub">Buy / Hold / Sell breakdown across custody peers</div>
+      <div class="chart-wrap h240"><canvas id="industryAnalystChart"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">EPS — Actual vs Estimate</div>
+      <div class="card-sub">Most recent quarter · all four peers</div>
+      <div class="chart-wrap h240"><canvas id="industryEpsChart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- Price target comparison -->
+  <div class="card" style="margin-bottom:13px">
+    <div class="card-title">Price Target Range</div>
+    <div class="card-sub">Analyst low / mean / high targets vs current price · click any bar for detail</div>
+    <div class="chart-wrap h260"><canvas id="industryPtChart"></canvas></div>
+  </div>
+
+  <!-- Individual peer cards -->
+  <div class="section-header">
+    <div class="section-title">Peer Detail Cards</div>
+  </div>
+  <div class="g4" id="industry-cards-grid">
+    <div class="loading-wrap" style="grid-column:1/-1"><div class="spinner"></div>Loading peer data...</div>
+  </div>
+</div>
+
 <!-- ══ NEWS ══ -->
 <div id="view-news" class="hidden">
   <div class="flex-between" style="margin-bottom:11px;flex-wrap:wrap;gap:9px">
@@ -888,6 +987,11 @@ const INDICES = ['SPY','QQQ','DIA','IWM'];
 const CG_IDS  = {BTC:'bitcoin',ETH:'ethereum',SOL:'solana',BNB:'binancecoin'};
 const YF_MAP  = {BTC:'BTC-USD',ETH:'ETH-USD',SOL:'SOL-USD',BNB:'BNB-USD'};
 
+const PEER_SYMS = ['NTRS','BK','STT','GS'];
+const PEER_NAMES = {NTRS:'Northern Trust Corp',BK:'BNY Mellon',STT:'State Street Corp',GS:'Goldman Sachs'};
+const PEER_COLORS = {NTRS:'#3b82f6',BK:'#a855f7',STT:'#14b8a6',GS:'#f59e0b'};
+const PEER_CLASSES = {NTRS:'peer-ntrs',BK:'peer-bk',STT:'peer-stt',GS:'peer-gs'};
+
 const SECTOR_ETFS = ['XLK','XLF','XLE','XLV','XLY','XLI','XLU','XLB','XLRE','XLC'];
 const SECTOR_NAMES = {
   XLK:'Technology',XLF:'Financials',XLE:'Energy',XLV:'Health Care',
@@ -924,7 +1028,8 @@ const SRC_COLORS = {
 ══════════════════════════════════════════════ */
 let DATA = {}, HIST = {}, LONG_HIST = {};
 let ANALYST = {}, EARNINGS = {}, NEWS = {}, MARKET_NEWS = [];
-let SECTOR_DATA = {};
+let SECTOR_DATA = {}, PEER_DATA = {}, PEER_ANALYST = {}, PEER_EARNINGS = {}, PEER_NEWS = {};
+let industryPerfRange = '1W';
 let CHARTS = {};
 let activeView = 'brief';
 let equityFilter = 'all', equitySearch = '';
@@ -1132,6 +1237,40 @@ async function fetchSectorQuote(sym){
     const q=await fhGet(`quote?symbol=${sym}`);
     if(q?.c) SECTOR_DATA[sym]={symbol:sym,price:q.c,change:q.d||0,pct:q.dp||0,high:q.h,low:q.l,open:q.o,prevClose:q.pc};
   }catch(e){}
+}
+async function fetchPeerQuote(sym){
+  try{
+    const q=await fhGet(`quote?symbol=${sym}`);
+    if(q?.c) PEER_DATA[sym]={symbol:sym,price:q.c,change:q.d||0,pct:q.dp||0,high:q.h,low:q.l,open:q.o,prevClose:q.pc,type:'stock'};
+  }catch(e){}
+}
+async function fetchPeerAnalyst(sym){
+  try{
+    const [rec,pt]=await Promise.all([fhGet(`stock/recommendation?symbol=${sym}`),fhGet(`stock/price-target?symbol=${sym}`)]);
+    const r=rec?.[0]||{};
+    const total=(r.strongBuy||0)+(r.buy||0)+(r.hold||0)+(r.sell||0)+(r.strongSell||0);
+    const bulls=(r.strongBuy||0)+(r.buy||0);
+    const bpct=total>0?bulls/total*100:0;
+    PEER_ANALYST[sym]={
+      consensus:bpct>=70?'Strong Buy':bpct>=55?'Buy':bpct>=40?'Hold':'Sell',
+      buy:bulls,hold:r.hold||0,sell:(r.sell||0)+(r.strongSell||0),total,
+      ptMean:pt?.targetMean||0,ptHigh:pt?.targetHigh||0,ptLow:pt?.targetLow||0,bullPct:bpct,
+    };
+  }catch(e){}
+}
+async function fetchPeerEarnings(sym){
+  try{
+    const hist=await fhGet(`stock/earnings?symbol=${sym}&limit=4`);
+    PEER_EARNINGS[sym]={history:Array.isArray(hist)?hist:[]};
+  }catch(e){PEER_EARNINGS[sym]={history:[]};}
+}
+async function fetchPeerNews(sym){
+  try{
+    const today=new Date().toISOString().split('T')[0];
+    const week=new Date(Date.now()-7*864e5).toISOString().split('T')[0];
+    const d=await fhGet(`company-news?symbol=${sym}&from=${week}&to=${today}`);
+    PEER_NEWS[sym]=Array.isArray(d)?d.filter(n=>n.headline).slice(0,4):[];
+  }catch(e){PEER_NEWS[sym]=[];}
 }
 
 /* ══════════════════════════════════════════════
@@ -1871,6 +2010,197 @@ function renderEarnings(){
 /* ══════════════════════════════════════════════
    MACRO TAB
 ══════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════
+   INDUSTRY TAB
+══════════════════════════════════════════════ */
+function renderIndustryKPIs(){
+  const el=document.getElementById('industry-kpi-row');
+  if(!el) return;
+  el.innerHTML=PEER_SYMS.map((sym,i)=>{
+    const d=PEER_DATA[sym];
+    const colorClass=['kblue','kpurple','kteal','kyellow'][i];
+    return`<div class="kpi ${colorClass}">
+      <div class="kpi-label">${PEER_NAMES[sym]||sym}</div>
+      <div class="kpi-val" style="font-size:1rem">${sym}</div>
+      <div style="font-size:1.15rem;font-weight:800;color:#fff;margin:4px 0 2px">${d?fP(d.price):'—'}</div>
+      <div class="kpi-sub ${d?upDn(d.pct):''}">${d?arr(d.pct)+' '+fPct(d.pct):'Loading...'}</div>
+    </div>`;
+  }).join('');
+}
+
+async function renderIndustryPerfChart(rangeKey){
+  industryPerfRange=rangeKey;
+  const el=document.getElementById('industryPerfChart');
+  if(!el) return;
+  dc('industryPerfChart');
+  const histData=await Promise.all(PEER_SYMS.map(s=>fetchHist(s,rangeKey)));
+  const valid=PEER_SYMS.map((s,i)=>({sym:s,h:histData[i]})).filter(x=>x.h?.prices?.length>=2);
+  if(!valid.length) return;
+  const labels=valid[0].h.labels;
+  CHARTS['industryPerfChart']=new Chart(el,{
+    type:'line',
+    data:{labels,datasets:valid.map(x=>{
+      const p=x.h.prices,b=p[0];
+      return{label:x.sym,data:p.map(v=>+((v-b)/b*100).toFixed(2)),borderColor:PEER_COLORS[x.sym],backgroundColor:'transparent',tension:0.4,pointRadius:0,pointHoverRadius:5,borderWidth:2.5};
+    })},
+    options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+      plugins:{legend:{labels:{color:FONT_C,usePointStyle:true,pointStyle:'circle',boxWidth:10,padding:12}},tooltip:{...TT_BASE,callbacks:{label:ctx=>`${ctx.dataset.label}: ${ctx.parsed.y>=0?'+':''}${ctx.parsed.y.toFixed(2)}%`}}},
+      scales:{x:{grid:{color:GRID_C},ticks:{color:FONT_C,maxTicksLimit:10}},y:{grid:{color:GRID_C},ticks:{color:FONT_C,callback:v=>`${v>=0?'+':''}${v.toFixed(1)}%`}}},
+      animation:{duration:400}}
+  });
+}
+
+function renderIndustryAnalystChart(){
+  dc('industryAnalystChart');
+  const el=document.getElementById('industryAnalystChart');
+  if(!el) return;
+  const syms=PEER_SYMS.filter(s=>PEER_ANALYST[s]?.total>0);
+  if(!syms.length) return;
+  CHARTS['industryAnalystChart']=new Chart(el,{
+    type:'bar',
+    data:{
+      labels:syms,
+      datasets:[
+        {label:'Buy',data:syms.map(s=>PEER_ANALYST[s]?.buy||0),backgroundColor:'rgba(34,197,94,0.7)',borderRadius:4},
+        {label:'Hold',data:syms.map(s=>PEER_ANALYST[s]?.hold||0),backgroundColor:'rgba(245,158,11,0.6)',borderRadius:4},
+        {label:'Sell',data:syms.map(s=>PEER_ANALYST[s]?.sell||0),backgroundColor:'rgba(239,68,68,0.6)',borderRadius:4},
+      ]
+    },
+    options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+      scales:{x:{grid:{color:GRID_C},ticks:{color:FONT_C}},y:{grid:{color:GRID_C},ticks:{color:FONT_C},stacked:false}},
+      plugins:{legend:{labels:{color:FONT_C,usePointStyle:true,pointStyle:'circle',boxWidth:8,padding:10}},tooltip:{...TT_BASE}},
+      animation:{duration:400}}
+  });
+}
+
+function renderIndustryEpsChart(){
+  dc('industryEpsChart');
+  const el=document.getElementById('industryEpsChart');
+  if(!el) return;
+  const syms=PEER_SYMS.filter(s=>PEER_EARNINGS[s]?.history?.length);
+  if(!syms.length) return;
+  CHARTS['industryEpsChart']=new Chart(el,{
+    type:'bar',
+    data:{
+      labels:syms,
+      datasets:[
+        {label:'Actual EPS',data:syms.map(s=>PEER_EARNINGS[s].history[0]?.actual||0),backgroundColor:'rgba(34,197,94,0.72)',borderRadius:5},
+        {label:'Estimate',data:syms.map(s=>PEER_EARNINGS[s].history[0]?.estimate||0),backgroundColor:'rgba(59,130,246,0.5)',borderRadius:5},
+      ]
+    },
+    options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+      plugins:{legend:{labels:{color:FONT_C,usePointStyle:true,pointStyle:'circle',boxWidth:8,padding:10}},tooltip:{...TT_BASE,callbacks:{label:ctx=>`${ctx.dataset.label}: $${(ctx.parsed.y||0).toFixed(2)}`}}},
+      scales:{x:{grid:{color:GRID_C},ticks:{color:FONT_C}},y:{grid:{color:GRID_C},ticks:{color:FONT_C,callback:v=>`$${v.toFixed(1)}`}}},
+      animation:{duration:400}}
+  });
+}
+
+function renderIndustryPtChart(){
+  dc('industryPtChart');
+  const el=document.getElementById('industryPtChart');
+  if(!el) return;
+  const syms=PEER_SYMS.filter(s=>PEER_ANALYST[s]?.ptMean>0&&PEER_DATA[s]);
+  if(!syms.length) return;
+  CHARTS['industryPtChart']=new Chart(el,{
+    type:'bar',
+    data:{
+      labels:syms,
+      datasets:[
+        {label:'PT Low',data:syms.map(s=>PEER_ANALYST[s]?.ptLow||0),backgroundColor:'rgba(239,68,68,0.4)',borderRadius:4},
+        {label:'PT Mean',data:syms.map(s=>PEER_ANALYST[s]?.ptMean||0),backgroundColor:syms.map(s=>PEER_COLORS[s]+'BB'),borderRadius:4,borderWidth:0},
+        {label:'PT High',data:syms.map(s=>PEER_ANALYST[s]?.ptHigh||0),backgroundColor:'rgba(34,197,94,0.4)',borderRadius:4},
+        {label:'Current Price',data:syms.map(s=>PEER_DATA[s]?.price||0),type:'line',borderColor:'#fff',backgroundColor:'transparent',borderWidth:2,borderDash:[5,3],pointRadius:5,pointBackgroundColor:'#fff',tension:0},
+      ]
+    },
+    options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+      plugins:{legend:{labels:{color:FONT_C,usePointStyle:true,pointStyle:'circle',boxWidth:8,padding:10}},tooltip:{...TT_BASE,callbacks:{label:ctx=>`${ctx.dataset.label}: ${fP(ctx.parsed.y)}`}}},
+      scales:{x:{grid:{color:GRID_C},ticks:{color:FONT_C}},y:{grid:{color:GRID_C},ticks:{color:FONT_C,callback:v=>`$${v.toFixed(0)}`}}},
+      animation:{duration:400}}
+  });
+}
+
+function renderIndustryCards(){
+  const el=document.getElementById('industry-cards-grid');
+  if(!el) return;
+  el.innerHTML=PEER_SYMS.map(sym=>{
+    const d=PEER_DATA[sym];
+    const an=PEER_ANALYST[sym];
+    const earn=PEER_EARNINGS[sym];
+    const news=PEER_NEWS[sym]||[];
+    if(!d) return`<div class="peer-card ${PEER_CLASSES[sym]||''}"><div class="peer-sym">${sym}</div><div style="color:var(--text3);font-size:.73rem;margin-top:8px">Loading...</div></div>`;
+
+    const upside=an?.ptMean&&d.price?((an.ptMean-d.price)/d.price*100):null;
+    const ptPct=an?.ptLow&&an?.ptHigh?Math.min(100,Math.max(0,(d.price-an.ptLow)/(an.ptHigh-an.ptLow)*100)):null;
+    const mostRecent=earn?.history?.[0];
+    const epsColor=mostRecent?.actual>=mostRecent?.estimate?'var(--green2)':'var(--red2)';
+
+    const upsideHTML=upside!=null?`<div class="peer-upside" style="color:${pCol(upside)};border-color:${upside>=0?'rgba(34,197,94,0.3)':'rgba(239,68,68,0.3)'}">PT Upside: ${fPct(upside)}</div>`:'';
+
+    const ptHTML=an?.ptMean?`
+      ${upsideHTML}
+      <div class="peer-pt-row">
+        <div class="peer-pt-label">PT Low</div>
+        <div class="peer-pt-track"><div class="peer-pt-fill" style="width:${ptPct??50}%"></div></div>
+        <div class="peer-pt-val">${fP(an.ptLow)}</div>
+      </div>
+      <div class="peer-pt-row">
+        <div class="peer-pt-label">PT Mean</div>
+        <div class="peer-pt-track"><div class="peer-pt-fill" style="width:${ptPct??50}%"></div></div>
+        <div class="peer-pt-val">${fP(an.ptMean)}</div>
+      </div>
+      <div class="peer-pt-row">
+        <div class="peer-pt-label">PT High</div>
+        <div class="peer-pt-track"><div class="peer-pt-fill" style="width:100%"></div></div>
+        <div class="peer-pt-val">${fP(an.ptHigh)}</div>
+      </div>`:'';
+
+    const epsHTML=mostRecent?`
+      <div style="font-size:.65rem;color:var(--text3);margin-bottom:4px">Latest EPS (${mostRecent.period||'—'})</div>
+      <div style="display:flex;gap:14px;font-size:.73rem">
+        <div>Actual <strong style="color:${epsColor}">${mostRecent.actual!=null?'$'+mostRecent.actual:'—'}</strong></div>
+        <div>Est <strong style="color:var(--text2)">${mostRecent.estimate!=null?'$'+mostRecent.estimate:'—'}</strong></div>
+        ${mostRecent.surprisePercent!=null?`<div>Surprise <strong style="color:${epsColor}">${mostRecent.surprisePercent>=0?'+':''}${mostRecent.surprisePercent.toFixed(2)}%</strong></div>`:''}
+      </div>`:'';
+
+    const newsHTML=news.length?`<div style="margin-top:2px">${news.slice(0,3).map(n=>`
+      <div class="peer-news-item"><span class="peer-news-dot">◆</span>
+      <div><a href="${n.url||'#'}" target="_blank" rel="noopener">${(n.headline||'').slice(0,80)}${n.headline?.length>80?'…':''}</a>${srcBadge(n.source)}</div>
+      </div>`).join('')}</div>`:'';
+
+    return`<div class="peer-card ${PEER_CLASSES[sym]||''}" data-sym="${sym}">
+      <div class="peer-header">
+        <div>
+          <div class="peer-sym">${sym}</div>
+          <div class="peer-name">${PEER_NAMES[sym]||''}</div>
+        </div>
+        <div>
+          <div class="peer-price">${fP(d.price)}</div>
+          <div class="peer-chg" style="color:${pCol(d.pct)}">${arr(d.pct)} ${fPct(d.pct)}</div>
+        </div>
+      </div>
+      <div class="peer-stats">
+        <div>H <strong>${fP(d.high)}</strong></div>
+        <div>L <strong>${fP(d.low)}</strong></div>
+        <div>Open <strong>${fP(d.open)}</strong></div>
+        <div>Prev <strong>${fP(d.prevClose)}</strong></div>
+      </div>
+      ${an?.total>0?`<div style="margin-bottom:8px"><span class="badge ${analystBadgeClass(an.consensus)}">${an.consensus}</span> <span style="font-size:.63rem;color:var(--text3);margin-left:4px">${an.buy}B · ${an.hold}H · ${an.sell}S (${an.total})</span></div>`:''}
+      ${ptHTML?`<div class="peer-divider"></div>${ptHTML}`:''}
+      ${epsHTML?`<div class="peer-divider"></div>${epsHTML}`:''}
+      ${newsHTML?`<div class="peer-divider"></div>${newsHTML}`:''}
+    </div>`;
+  }).join('');
+}
+
+async function renderIndustryTab(){
+  renderIndustryKPIs();
+  renderIndustryAnalystChart();
+  renderIndustryEpsChart();
+  renderIndustryPtChart();
+  renderIndustryCards();
+  await renderIndustryPerfChart(industryPerfRange);
+}
+
 function renderMacroKPIs(){
   const el=document.getElementById('macro-kpi-row');
   if(!el) return;
@@ -1991,11 +2321,11 @@ function renderNewsTab(){
    MODAL
 ══════════════════════════════════════════════ */
 function openModal(sym){
-  const d=DATA[sym]||SECTOR_DATA[sym];
+  const d=DATA[sym]||SECTOR_DATA[sym]||PEER_DATA[sym];
   if(!d) return;
-  const an=ANALYST[sym];
-  const earn=EARNINGS[sym];
-  const news=NEWS[sym]||[];
+  const an=ANALYST[sym]||PEER_ANALYST[sym];
+  const earn=EARNINGS[sym]||PEER_EARNINGS[sym];
+  const news=NEWS[sym]||PEER_NEWS[sym]||[];
   const sig=LONG_HIST[sym]?getCompositeSignal(sym):null;
   const upside=an?.ptMean&&d?.price?((an.ptMean-d.price)/d.price*100):null;
   const w52=get52Week(sym);
@@ -2095,7 +2425,7 @@ function showToast(msg){
 /* ══════════════════════════════════════════════
    NAVIGATION
 ══════════════════════════════════════════════ */
-const VIEWS=['brief','portfolio','markets','signals','heatmap','earnings','macro','news'];
+const VIEWS=['brief','portfolio','markets','signals','heatmap','earnings','macro','industry','news'];
 
 function showView(view){
   VIEWS.forEach(v=>{document.getElementById('view-'+v).classList.add('hidden');});
@@ -2110,6 +2440,7 @@ function showView(view){
   if(view==='markets')renderMarketsTab(marketsRange);
   if(view==='signals')renderSignals();
   if(view==='macro')renderMacroTab();
+  if(view==='industry')renderIndustryTab();
   if(view==='portfolio'){renderPortfolioCards();renderAllocChart();renderWinLossChart();}
 }
 
@@ -2170,9 +2501,15 @@ function bindEvents(){
   // News search
   document.getElementById('news-search')?.addEventListener('input',e=>{newsSearch=e.target.value;renderNewsTab();});
 
-  // Stock card click → modal
+  // Industry perf range
+  document.getElementById('industry-perf-range')?.querySelectorAll('.range-btn').forEach(btn=>btn.addEventListener('click',()=>{
+    document.getElementById('industry-perf-range').querySelectorAll('.range-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');renderIndustryPerfChart(btn.dataset.range);
+  }));
+
+  // Stock / peer card click → modal
   document.addEventListener('click',e=>{
-    const card=e.target.closest('.stock-card,.heat-cell');
+    const card=e.target.closest('.stock-card,.heat-cell,.peer-card');
     if(card){const sym=card.dataset.sym;if(sym)openModal(sym);}
   });
 }
@@ -2195,6 +2532,7 @@ async function loadAll(){
     fetchIndex('VIX'),
     // Sector + macro ETFs
     ...[...SECTOR_ETFS,...MACRO_SYMS].map(s=>fetchSectorQuote(s)),
+    ...PEER_SYMS.map(fetchPeerQuote),
   ]);
 
   // Parallel fetch — fundamentals
@@ -2203,6 +2541,9 @@ async function loadAll(){
     ...EQUITY_SYMS.map(fetchEarnings),
     ...ALL.map(s=>fetchNews(s)),
     fetchMarketNews(),
+    ...PEER_SYMS.map(fetchPeerAnalyst),
+    ...PEER_SYMS.map(fetchPeerEarnings),
+    ...PEER_SYMS.map(fetchPeerNews),
   ]);
 
   // Long history for signals (parallel, best effort)
@@ -2223,6 +2564,7 @@ async function loadAll(){
   else if(activeView==='heatmap')renderHeatmap(heatmapRange);
   else if(activeView==='earnings')renderEarnings();
   else if(activeView==='macro')renderMacroTab();
+  else if(activeView==='industry')renderIndustryTab();
   else if(activeView==='news')renderNewsTab();
 
   // Auto-render portfolio chart if on brief (first load)
