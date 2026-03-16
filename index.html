@@ -131,6 +131,12 @@ main{padding:18px 22px;max-width:1440px;margin:0 auto}
 .filter-pill:hover{border-color:var(--blue);color:var(--blue)}
 .filter-pill.active{background:rgba(59,130,246,0.15);border-color:var(--blue);color:var(--blue)}
 
+/* ── TIME RANGE SELECTOR ── */
+.range-row{display:flex;gap:4px}
+.range-btn{background:rgba(255,255,255,0.04);border:1px solid var(--border);color:var(--muted);padding:3px 10px;border-radius:6px;font-size:0.68rem;font-weight:600;cursor:pointer;transition:all 0.15s;font-family:'Inter',sans-serif}
+.range-btn:hover{border-color:var(--blue);color:var(--blue)}
+.range-btn.active{background:rgba(59,130,246,0.15);border-color:var(--blue);color:var(--blue)}
+
 /* ── DETAIL MODAL ── */
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px);opacity:0;pointer-events:none;transition:opacity 0.2s}
 .modal-overlay.open{opacity:1;pointer-events:all}
@@ -196,14 +202,32 @@ main{padding:18px 22px;max-width:1440px;margin:0 auto}
   <div class="kpi-row" id="kpi-row">
     <div class="loading-state" style="grid-column:1/-1"><div class="spinner"></div>Fetching live data...</div>
   </div>
-  <div class="section-label">Today's Performance</div>
+  <div class="section-label">Performance</div>
   <div class="grid2">
     <div class="chart-card">
-      <div class="cc-header"><div><div class="cc-title">Equities — Daily Change %</div><div class="cc-sub">Sorted by performance · hover for details</div></div></div>
+      <div class="cc-header">
+        <div><div class="cc-title">Equities — Performance</div><div class="cc-sub">Hover for details</div></div>
+        <div class="range-row" id="eq-range-row">
+          <button class="range-btn active" data-range="1D">1D</button>
+          <button class="range-btn" data-range="1W">1W</button>
+          <button class="range-btn" data-range="1M">1M</button>
+          <button class="range-btn" data-range="3M">3M</button>
+          <button class="range-btn" data-range="YTD">YTD</button>
+        </div>
+      </div>
       <div class="chart-wrap h240"><canvas id="equityBarChart"></canvas></div>
     </div>
     <div class="chart-card">
-      <div class="cc-header"><div><div class="cc-title">Crypto — 24h Change %</div><div class="cc-sub">BTC · ETH · SOL · BNB</div></div></div>
+      <div class="cc-header">
+        <div><div class="cc-title">Crypto — Performance</div><div class="cc-sub">BTC · ETH · SOL · BNB</div></div>
+        <div class="range-row" id="crypto-range-row">
+          <button class="range-btn active" data-range="1D">1D</button>
+          <button class="range-btn" data-range="1W">1W</button>
+          <button class="range-btn" data-range="1M">1M</button>
+          <button class="range-btn" data-range="3M">3M</button>
+          <button class="range-btn" data-range="YTD">YTD</button>
+        </div>
+      </div>
       <div class="chart-wrap h240"><canvas id="cryptoBarChart"></canvas></div>
     </div>
   </div>
@@ -229,9 +253,17 @@ main{padding:18px 22px;max-width:1440px;margin:0 auto}
 <!-- ═══ CRYPTO ═══ -->
 <div id="view-crypto" class="hidden">
   <div class="grid4" id="crypto-grid"></div>
-  <div class="section-label">Crypto — 30-Day Trend</div>
+  <div class="section-label">Crypto Trend</div>
   <div class="chart-card">
-    <div class="cc-header"><div><div class="cc-title">BTC · ETH · SOL · BNB — Price Trend</div><div class="cc-sub">10-day normalized performance · hover to inspect</div></div></div>
+    <div class="cc-header">
+      <div><div class="cc-title">BTC · ETH · SOL · BNB — Price Trend</div><div class="cc-sub">Normalized % · hover to inspect · toggle in legend</div></div>
+      <div class="range-row" id="crypto-trend-range-row">
+        <button class="range-btn active" data-range="1W">1W</button>
+        <button class="range-btn" data-range="1M">1M</button>
+        <button class="range-btn" data-range="3M">3M</button>
+        <button class="range-btn" data-range="YTD">YTD</button>
+      </div>
+    </div>
     <div class="chart-wrap h300"><canvas id="cryptoTrendChart"></canvas></div>
   </div>
 </div>
@@ -240,9 +272,17 @@ main{padding:18px 22px;max-width:1440px;margin:0 auto}
 <div id="view-heatmap" class="hidden">
   <div class="section-label">Portfolio Heat Map — Click any cell to see details</div>
   <div class="heatmap" id="heatmap-grid"></div>
-  <div class="section-label">10-Day Normalized Performance (%)</div>
+  <div class="section-label">Normalized Performance (%)</div>
   <div class="chart-card">
-    <div class="cc-header"><div><div class="cc-title">All Holdings — Relative Performance</div><div class="cc-sub">Indexed to 0% from 10 trading days ago · toggle lines in legend</div></div></div>
+    <div class="cc-header">
+      <div><div class="cc-title">All Holdings — Relative Performance</div><div class="cc-sub">Toggle lines in legend · hover to inspect</div></div>
+      <div class="range-row" id="heatmap-range-row">
+        <button class="range-btn active" data-range="1W">1W</button>
+        <button class="range-btn" data-range="1M">1M</button>
+        <button class="range-btn" data-range="3M">3M</button>
+        <button class="range-btn" data-range="YTD">YTD</button>
+      </div>
+    </div>
     <div class="chart-wrap h360"><canvas id="trendChart"></canvas></div>
   </div>
 </div>
@@ -300,6 +340,13 @@ main{padding:18px 22px;max-width:1440px;margin:0 auto}
 
 <script>
 const FINNHUB_KEY = 'd6rq7f9r01qrri553rc0d6rq7f9r01qrri553rcg';
+const RANGE_MAP = {
+  '1D': {range:'5d',  interval:'1d',  label:'5 Days'},
+  '1W': {range:'5d',  interval:'1d',  label:'1 Week'},
+  '1M': {range:'1mo', interval:'1d',  label:'1 Month'},
+  '3M': {range:'3mo', interval:'1wk', label:'3 Months'},
+  'YTD':{range:'ytd', interval:'1wk', label:'Year to Date'},
+};
 const STOCKS  = ['AAPL','ARKB','BROS','COIN','F','META','NVDA','PLTR','TSLA','FXAIX'];
 const CRYPTOS = ['BTC','ETH','SOL','BNB'];
 const CRYPTO_IDS = {BTC:'bitcoin',ETH:'ethereum',SOL:'solana',BNB:'binancecoin'};
@@ -316,10 +363,11 @@ Chart.defaults.font.family = "Inter, -apple-system, sans-serif";
 Chart.defaults.font.size = 11;
 
 // ── State ──────────────────────────────────────
-let DATA = {}, HIST = {}, ANALYST = {}, EARNINGS_DATA = {}, NEWS = {};
+let DATA = {}, HIST = {}, HIST_RANGE = {}, ANALYST = {}, EARNINGS_DATA = {}, NEWS = {};
 let charts = {};
 let eqFilter = 'all', newsFilter = 'all';
 let isLoading = false;
+let currentRanges = {eq:'1D', crypto:'1D', heatmap:'1W', cryptoTrend:'1W'};
 
 // ── API helpers ────────────────────────────────
 async function fh(path) {
@@ -366,6 +414,37 @@ async function fetchHist(sym) {
       prices: pairs.map(([,c])=>+c.toFixed(2))
     };
   } catch(e){}
+}
+
+async function fetchHistRange(sym, rangeKey) {
+  const {range, interval} = RANGE_MAP[rangeKey] || RANGE_MAP['1W'];
+  try {
+    const cs = {BTC:'BTC-USD',ETH:'ETH-USD',SOL:'SOL-USD',BNB:'BNB-USD'}[sym]||sym;
+    const r = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${cs}?interval=${interval}&range=${range}`);
+    const d = await r.json();
+    const res = d?.chart?.result?.[0];
+    if (!res) return null;
+    const closes = res.indicators.quote[0].close;
+    const ts = res.timestamp;
+    const pairs = ts.map((t,i)=>[t,closes[i]]).filter(([,c])=>c!=null);
+    return {
+      labels: pairs.map(([t])=>{
+        const dt = new Date(t*1000);
+        return interval==='1d'
+          ? dt.toLocaleDateString('en-US',{month:'numeric',day:'numeric'})
+          : dt.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+      }),
+      prices: pairs.map(([,c])=>+c.toFixed(2))
+    };
+  } catch(e){ return null; }
+}
+
+async function getPctChangeForRange(sym, rangeKey) {
+  if(rangeKey==='1D') return DATA[sym]?.pct||0;
+  const hist = await fetchHistRange(sym, rangeKey);
+  if(!hist||hist.prices.length<2) return null;
+  const first = hist.prices[0], last = hist.prices[hist.prices.length-1];
+  return (last-first)/first*100;
 }
 async function fetchAnalyst(sym) {
   try {
@@ -517,28 +596,148 @@ function attachSparks() {
   });
 }
 
-// ── Overview charts ────────────────────────────
-function renderOverviewCharts() {
-  const sorted = STOCKS.filter(s=>DATA[s]?.pct!=null).sort((a,b)=>DATA[b].pct-DATA[a].pct);
+// ── Overview charts (range-aware) ─────────────
+async function renderEquityChart(rangeKey) {
+  currentRanges.eq = rangeKey;
+  const syms = STOCKS.filter(s=>DATA[s]);
+
+  let labels, datasets;
+
+  if(rangeKey === '1D') {
+    const sorted = syms.filter(s=>DATA[s]?.pct!=null).sort((a,b)=>DATA[b].pct-DATA[a].pct);
+    labels = sorted;
+    datasets = [{
+      data:sorted.map(s=>DATA[s].pct),
+      backgroundColor:sorted.map(s=>DATA[s].pct>=0?'rgba(34,197,94,0.75)':'rgba(239,68,68,0.75)'),
+      borderRadius:6,borderSkipped:false
+    }];
+    dc('equityBarChart');
+    charts['equityBarChart'] = new Chart(document.getElementById('equityBarChart'), {
+      type:'bar',
+      data:{labels,datasets},
+      options:{responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:false},tooltip:{...TT,callbacks:{label:ctx=>`${ctx.label}: ${fPct(ctx.parsed.y)}`}}},
+        scales:{x:{grid:{color:GRID_COL},ticks:{color:FONT_COL}},y:{grid:{color:GRID_COL},ticks:{color:FONT_COL,callback:v=>`${v>=0?'+':''}${v.toFixed(1)}%`}}},
+        interaction:{mode:'index',intersect:false}}
+    });
+    return;
+  }
+
+  // For multi-day ranges: line chart
+  const histResults = await Promise.all(syms.map(s=>fetchHistRange(s,rangeKey)));
+  const valid = syms.map((s,i)=>({sym:s,hist:histResults[i]})).filter(x=>x.hist?.prices?.length>=2);
+  if(!valid.length) return;
+  const lbs = valid[0].hist.labels;
+
   dc('equityBarChart');
   charts['equityBarChart'] = new Chart(document.getElementById('equityBarChart'), {
-    type:'bar',
-    data:{labels:sorted,datasets:[{data:sorted.map(s=>DATA[s].pct),backgroundColor:sorted.map(s=>DATA[s].pct>=0?'rgba(34,197,94,0.75)':'rgba(239,68,68,0.75)'),borderRadius:6,borderSkipped:false}]},
+    type:'line',
+    data:{labels:lbs, datasets:valid.map((x,i)=>{
+      const p=x.hist.prices, b=p[0];
+      const norm = p.map(v=>+((v-b)/b*100).toFixed(2));
+      return {label:x.sym,data:norm,borderColor:PALETTE[i%PALETTE.length],backgroundColor:'transparent',tension:0.4,pointRadius:0,pointHoverRadius:5,borderWidth:2};
+    })},
     options:{responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{display:false},tooltip:{...TT,callbacks:{label:ctx=>`${ctx.label}: ${fPct(ctx.parsed.y)}`}}},
-      scales:{x:{grid:{color:GRID_COL},ticks:{color:FONT_COL}},y:{grid:{color:GRID_COL},ticks:{color:FONT_COL,callback:v=>`${v>=0?'+':''}${v.toFixed(1)}%`}}},
-      interaction:{mode:'index',intersect:false}}
+      interaction:{mode:'index',intersect:false},
+      plugins:{legend:{labels:{color:FONT_COL,usePointStyle:true,pointStyle:'circle',boxWidth:8,padding:10,font:{size:10}}},tooltip:{...TT,callbacks:{label:ctx=>`${ctx.dataset.label}: ${ctx.parsed.y>=0?'+':''}${ctx.parsed.y.toFixed(2)}%`}}},
+      scales:{x:{grid:{color:GRID_COL},ticks:{color:FONT_COL,maxTicksLimit:8}},y:{grid:{color:GRID_COL},ticks:{color:FONT_COL,callback:v=>`${v>=0?'+':''}${v.toFixed(1)}%`}}}}
   });
+}
 
-  const cSorted = CRYPTOS.filter(s=>DATA[s]?.pct!=null).sort((a,b)=>DATA[b].pct-DATA[a].pct);
+async function renderCryptoChart(rangeKey) {
+  currentRanges.crypto = rangeKey;
+  const syms = CRYPTOS.filter(s=>DATA[s]);
+
+  if(rangeKey === '1D') {
+    const sorted = syms.filter(s=>DATA[s]?.pct!=null).sort((a,b)=>DATA[b].pct-DATA[a].pct);
+    dc('cryptoBarChart');
+    charts['cryptoBarChart'] = new Chart(document.getElementById('cryptoBarChart'), {
+      type:'bar',
+      data:{labels:sorted,datasets:[{data:sorted.map(s=>DATA[s].pct),backgroundColor:sorted.map(s=>DATA[s].pct>=0?'rgba(59,130,246,0.75)':'rgba(239,68,68,0.75)'),borderRadius:6,borderSkipped:false}]},
+      options:{responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:false},tooltip:{...TT,callbacks:{label:ctx=>`${ctx.label}: ${fPct(ctx.parsed.y)}`}}},
+        scales:{x:{grid:{color:GRID_COL},ticks:{color:FONT_COL}},y:{grid:{color:GRID_COL},ticks:{color:FONT_COL,callback:v=>`${v>=0?'+':''}${v.toFixed(1)}%`}}},
+        interaction:{mode:'index',intersect:false}}
+    });
+    return;
+  }
+
+  const histResults = await Promise.all(syms.map(s=>fetchHistRange(s,rangeKey)));
+  const valid = syms.map((s,i)=>({sym:s,hist:histResults[i]})).filter(x=>x.hist?.prices?.length>=2);
+  if(!valid.length) return;
+  const lbs = valid[0].hist.labels;
+
   dc('cryptoBarChart');
   charts['cryptoBarChart'] = new Chart(document.getElementById('cryptoBarChart'), {
-    type:'bar',
-    data:{labels:cSorted,datasets:[{data:cSorted.map(s=>DATA[s].pct),backgroundColor:cSorted.map(s=>DATA[s].pct>=0?'rgba(59,130,246,0.75)':'rgba(239,68,68,0.75)'),borderRadius:6,borderSkipped:false}]},
+    type:'line',
+    data:{labels:lbs, datasets:valid.map((x,i)=>{
+      const p=x.hist.prices, b=p[0];
+      const norm = p.map(v=>+((v-b)/b*100).toFixed(2));
+      const col = ['#f59e0b','#a855f7','#3b82f6','#f97316'][i]||PALETTE[i];
+      return {label:x.sym,data:norm,borderColor:col,backgroundColor:col+'18',fill:i===0,tension:0.4,pointRadius:0,pointHoverRadius:5,borderWidth:2.5};
+    })},
     options:{responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{display:false},tooltip:{...TT,callbacks:{label:ctx=>`${ctx.label}: ${fPct(ctx.parsed.y)}`}}},
-      scales:{x:{grid:{color:GRID_COL},ticks:{color:FONT_COL}},y:{grid:{color:GRID_COL},ticks:{color:FONT_COL,callback:v=>`${v>=0?'+':''}${v.toFixed(1)}%`}}},
-      interaction:{mode:'index',intersect:false}}
+      interaction:{mode:'index',intersect:false},
+      plugins:{legend:{labels:{color:FONT_COL,usePointStyle:true,pointStyle:'circle',boxWidth:8,padding:10,font:{size:10}}},tooltip:{...TT,callbacks:{label:ctx=>`${ctx.dataset.label}: ${ctx.parsed.y>=0?'+':''}${ctx.parsed.y.toFixed(2)}%`}}},
+      scales:{x:{grid:{color:GRID_COL},ticks:{color:FONT_COL,maxTicksLimit:8}},y:{grid:{color:GRID_COL},ticks:{color:FONT_COL,callback:v=>`${v>=0?'+':''}${v.toFixed(1)}%`}}}}
+  });
+}
+
+async function renderTrendChartRange(rangeKey, canvasId='trendChart', syms=ALL_SYMS) {
+  const histResults = await Promise.all(syms.map(s=>fetchHistRange(s,rangeKey)));
+  const valid = syms.map((s,i)=>({sym:s,hist:histResults[i]})).filter(x=>x.hist?.prices?.length>=2);
+  if(!valid.length) return;
+  const lbs = valid[0].hist.labels;
+  dc(canvasId);
+  charts[canvasId] = new Chart(document.getElementById(canvasId), {
+    type:'line',
+    data:{labels:lbs, datasets:valid.map((x,i)=>{
+      const p=x.hist.prices, b=p[0];
+      return {label:x.sym,data:p.map(v=>+((v-b)/b*100).toFixed(2)),borderColor:PALETTE[i%PALETTE.length],backgroundColor:'transparent',tension:0.3,pointRadius:0,pointHoverRadius:5,borderWidth:2};
+    })},
+    options:{responsive:true,maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
+      plugins:{legend:{labels:{color:FONT_COL,usePointStyle:true,pointStyle:'circle',boxWidth:8,padding:12,font:{size:10}}},tooltip:{...TT,callbacks:{label:ctx=>`${ctx.dataset.label}: ${ctx.parsed.y>=0?'+':''}${ctx.parsed.y.toFixed(2)}%`}}},
+      scales:{x:{grid:{color:GRID_COL},ticks:{color:FONT_COL,maxTicksLimit:8}},y:{grid:{color:GRID_COL},ticks:{color:FONT_COL,callback:v=>`${v>=0?'+':''}${v.toFixed(1)}%`}}}}
+  });
+}
+
+function renderOverviewCharts() {
+  renderEquityChart(currentRanges.eq);
+  renderCryptoChart(currentRanges.crypto);
+}
+
+// ── Wire up range buttons ──────────────────────
+function setupRangeButtons() {
+  document.getElementById('eq-range-row')?.querySelectorAll('.range-btn').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      document.querySelectorAll('#eq-range-row .range-btn').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      renderEquityChart(btn.dataset.range);
+    });
+  });
+  document.getElementById('crypto-range-row')?.querySelectorAll('.range-btn').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      document.querySelectorAll('#crypto-range-row .range-btn').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      renderCryptoChart(btn.dataset.range);
+    });
+  });
+  document.getElementById('heatmap-range-row')?.querySelectorAll('.range-btn').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      document.querySelectorAll('#heatmap-range-row .range-btn').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      currentRanges.heatmap = btn.dataset.range;
+      renderTrendChartRange(btn.dataset.range,'trendChart',ALL_SYMS);
+    });
+  });
+  document.getElementById('crypto-trend-range-row')?.querySelectorAll('.range-btn').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      document.querySelectorAll('#crypto-trend-range-row .range-btn').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      currentRanges.cryptoTrend = btn.dataset.range;
+      renderTrendChartRange(btn.dataset.range,'cryptoTrendChart',CRYPTOS);
+    });
   });
 }
 
@@ -569,22 +768,7 @@ function renderCrypto() {
   document.getElementById('crypto-grid').innerHTML = CRYPTOS.map(s=>stockCardHTML(s,true,false)).join('');
   attachSparks();
 
-  // Trend chart
-  const syms = CRYPTOS.filter(s=>HIST[s]?.prices?.length>=3);
-  if(!syms.length) return;
-  const labels = HIST[syms[0]]?.labels||[];
-  dc('cryptoTrendChart');
-  charts['cryptoTrendChart'] = new Chart(document.getElementById('cryptoTrendChart'), {
-    type:'line',
-    data:{labels,datasets:syms.map((s,i)=>{
-      const p = HIST[s].prices, b = p[0];
-      return {label:s,data:p.map(x=>+((x-b)/b*100).toFixed(2)),borderColor:PALETTE[i],backgroundColor:'transparent',tension:0.4,pointRadius:0,pointHoverRadius:6,borderWidth:2.5};
-    })},
-    options:{responsive:true,maintainAspectRatio:false,
-      interaction:{mode:'index',intersect:false},
-      plugins:{legend:{labels:{color:FONT_COL,usePointStyle:true,pointStyle:'circle',boxWidth:8,padding:14}},tooltip:{...TT,callbacks:{label:ctx=>`${ctx.dataset.label}: ${ctx.parsed.y>=0?'+':''}${ctx.parsed.y.toFixed(2)}%`}}},
-      scales:{x:{grid:{color:GRID_COL},ticks:{color:FONT_COL}},y:{grid:{color:GRID_COL},ticks:{color:FONT_COL,callback:v=>`${v>=0?'+':''}${v.toFixed(1)}%`}}}}
-  });
+  renderTrendChartRange(currentRanges.cryptoTrend,'cryptoTrendChart',CRYPTOS);
 }
 
 // ── Heatmap ────────────────────────────────────
@@ -600,21 +784,7 @@ function renderHeatmap() {
     </div>`;
   }).join('');
 
-  const syms = ALL_SYMS.filter(s=>HIST[s]?.prices?.length>=3);
-  if(!syms.length) return;
-  const labels = HIST[syms[0]]?.labels||[];
-  dc('trendChart');
-  charts['trendChart'] = new Chart(document.getElementById('trendChart'), {
-    type:'line',
-    data:{labels,datasets:syms.map((s,i)=>{
-      const p=HIST[s].prices, b=p[0];
-      return {label:s,data:p.map(x=>+((x-b)/b*100).toFixed(2)),borderColor:PALETTE[i%PALETTE.length],backgroundColor:'transparent',tension:0.3,pointRadius:0,pointHoverRadius:5,borderWidth:2};
-    })},
-    options:{responsive:true,maintainAspectRatio:false,
-      interaction:{mode:'index',intersect:false},
-      plugins:{legend:{labels:{color:FONT_COL,usePointStyle:true,pointStyle:'circle',boxWidth:8,padding:12}},tooltip:{...TT,callbacks:{label:ctx=>`${ctx.dataset.label}: ${ctx.parsed.y>=0?'+':''}${ctx.parsed.y.toFixed(2)}%`}}},
-      scales:{x:{grid:{color:GRID_COL},ticks:{color:FONT_COL}},y:{grid:{color:GRID_COL},ticks:{color:FONT_COL,callback:v=>`${v>=0?'+':''}${v.toFixed(1)}%`}}}}
-  });
+  renderTrendChartRange(currentRanges.heatmap,'trendChart',ALL_SYMS);
 }
 
 // ── Earnings ───────────────────────────────────
@@ -815,6 +985,7 @@ async function loadAll() {
   toast('✅ Data refreshed');
 }
 
+setupRangeButtons();
 loadAll();
 setInterval(loadAll, 5*60*1000);
 </script>
