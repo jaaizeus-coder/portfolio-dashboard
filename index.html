@@ -1001,13 +1001,12 @@ const SECTOR_NAMES = {
 const MACRO_SYMS = ['GLD','USO','TLT','UUP'];
 const MACRO_LABELS = {GLD:'Gold ETF',USO:'Oil ETF',TLT:'Bonds 20Y',UUP:'US Dollar'};
 
-// Finnhub candle resolution + days-back
 const RANGE_CFG = {
-  '1D' :{days:2,   res:'D'},
-  '1W' :{days:7,   res:'D'},
-  '1M' :{days:30,  res:'D'},
-  '3M' :{days:90,  res:'D'},
-  'YTD':{days:'ytd',res:'D'},
+  '1D' :{range:'2d',  interval:'1h'},
+  '1W' :{range:'5d',  interval:'1d'},
+  '1M' :{range:'1mo', interval:'1d'},
+  '3M' :{range:'3mo', interval:'1d'},
+  'YTD':{range:'ytd', interval:'1wk'},
 };
 
 /* ══════════════════════════════════════════════
@@ -1123,13 +1122,14 @@ async function fhGet(path){
     return r.json();
   }catch(e){return null;}
 }
-// Yahoo removed — CORS blocked. Use Finnhub candles instead.
-function ytdFrom(){const n=new Date();return Math.floor(new Date(n.getFullYear(),0,1)/1000);}
-async function fhCandles(sym,from,to,res='D'){
+// Use corsproxy.io to bypass GitHub Pages CORS on Yahoo Finance
+const YF_PROXY='https://corsproxy.io/?url=';
+async function yfGet(sym,range='5d',interval='1d'){
   try{
-    const r=await fhGet(`stock/candle?symbol=${sym}&resolution=${res}&from=${from}&to=${to}`);
-    if(!r||r.s!=='ok') return null;
-    return r;
+    const url=`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?interval=${interval}&range=${range}`;
+    const r=await fetch(YF_PROXY+encodeURIComponent(url));
+    if(!r.ok) return null;
+    return r.json();
   }catch(e){return null;}
 }
 async function cgMarket(id,days){
@@ -1169,35 +1169,33 @@ async function fetchIndex(sym){
     if(q?.c) DATA[sym]={symbol:sym,price:q.c,change:q.d||0,pct:q.dp||0,high:q.h,low:q.l,type:'index'};
   }catch(e){}
 }
-function rangeWindow(rangeKey){
-  const now=Math.floor(Date.now()/1000);
-  const cfg=RANGE_CFG[rangeKey]||RANGE_CFG['1W'];
-  const from=cfg.days==='ytd'?ytdFrom():now-cfg.days*86400;
-  return{from,to:now};
-}
-
 async function fetchHist(sym,rangeKey='1W'){
+  const{range,interval}=RANGE_CFG[rangeKey]||RANGE_CFG['1W'];
   try{
-    const{from,to}=rangeWindow(rangeKey);
     if(CRYPTOS.includes(sym)){
       const id=CG_IDS[sym];
-      const days=rangeKey==='YTD'?365:RANGE_CFG[rangeKey]?.days||7;
-      const d=await cgMarket(id,Math.min(days,365));
+      const cgDays={1D:1,1W:7,1M:30,'3M':90,YTD:365};
+      const days=cgDays[rangeKey]||7;
+      const d=await cgMarket(id,days);
       if(!d?.prices?.length) return null;
-      const pairs=d.prices;
       return{
-        labels:pairs.map(([t])=>new Date(t).toLocaleDateString('en-US',{month:'numeric',day:'numeric'})),
-        prices:pairs.map(([,c])=>+c.toFixed(4)),
+        labels:d.prices.map(([t])=>new Date(t).toLocaleDateString('en-US',{month:'numeric',day:'numeric'})),
+        prices:d.prices.map(([,c])=>+c.toFixed(4)),
         volumes:d.total_volumes?.map(([,v])=>v)||[],
       };
     }
-    const c=await fhCandles(sym,from,to,'D');
-    if(!c) return null;
-    const pairs=c.t.map((t,i)=>[t,c.c[i],c.v?.[i]||0]).filter(([,cl])=>cl!=null);
+    const yfSym=YF_MAP[sym]||sym;
+    const d=await yfGet(yfSym,range,interval);
+    const res=d?.chart?.result?.[0];
+    if(!res) return null;
+    const closes=res.indicators.quote[0].close;
+    const ts=res.timestamp;
+    const vols=res.indicators.quote[0].volume||[];
+    const pairs=ts.map((t,i)=>[t,closes[i],vols[i]]).filter(([,c])=>c!=null);
     return{
       labels:pairs.map(([t])=>new Date(t*1000).toLocaleDateString('en-US',{month:'numeric',day:'numeric'})),
-      prices:pairs.map(([,cl])=>+cl.toFixed(2)),
-      volumes:pairs.map(([,,v])=>v),
+      prices:pairs.map(([,c])=>+c.toFixed(2)),
+      volumes:pairs.map(([,,v])=>v||0),
     };
   }catch(e){return null;}
 }
@@ -1214,14 +1212,17 @@ async function fetchLongHist(sym){
       };
       return;
     }
-    const to=Math.floor(Date.now()/1000);
-    const from=to-365*86400;
-    const c=await fhCandles(sym,from,to,'D');
-    if(!c) return;
-    const pairs=c.t.map((t,i)=>[t,c.c[i],c.v?.[i]||0]).filter(([,cl])=>cl!=null);
+    const yfSym=YF_MAP[sym]||sym;
+    const d=await yfGet(yfSym,'1y','1d');
+    const res=d?.chart?.result?.[0];
+    if(!res) return;
+    const closes=res.indicators.quote[0].close;
+    const vols=res.indicators.quote[0].volume||[];
+    const ts=res.timestamp;
+    const pairs=ts.map((t,i)=>[t,closes[i],vols[i]]).filter(([,c])=>c!=null);
     LONG_HIST[sym]={
-      prices:pairs.map(([,cl])=>+cl.toFixed(2)),
-      volumes:pairs.map(([,,v])=>v),
+      prices:pairs.map(([,c])=>+c.toFixed(2)),
+      volumes:pairs.map(([,,v])=>v||0),
     };
   }catch(e){}
 }
