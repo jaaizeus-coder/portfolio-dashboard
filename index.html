@@ -711,7 +711,7 @@ main{padding:18px 24px 32px;max-width:1600px;margin:0 auto}
       <span class="zeus-badge">AI POWERED</span>
     </div>
     <div id="zeus-brief-body">
-      <div class="zeus-spinner"><div class="spinner"></div><span>Generating intelligence brief...</span></div>
+      <div id="zeus-brief-content" style="color:var(--text3);font-size:.78rem;padding:4px 0">Loading brief...</div>
     </div>
   </div>
 
@@ -2778,18 +2778,25 @@ async function loadAll(){
   btn.classList.add('loading');
   updateMarketStatus();
 
-  // Parallel fetch — quotes
+  // PHASE 1 — quotes only (fast, ~1-2s). Render brief immediately after.
   await Promise.allSettled([
     ...STOCKS.map(fetchQuote),
     ...CRYPTOS.map(fetchCrypto),
     ...INDICES.map(fetchIndex),
     fetchIndex('VIX'),
-    // Sector + macro ETFs
     ...[...SECTOR_ETFS,...MACRO_SYMS].map(s=>fetchSectorQuote(s)),
     ...PEER_SYMS.map(fetchPeerQuote),
   ]);
 
-  // Parallel fetch — fundamentals
+  // Render immediately with quote data — no waiting for history
+  renderBrief();
+  zeus_renderBrief();
+  if(activeView==='portfolio'){renderPortfolioCards();renderAllocChart();renderWinLossChart();}
+  else if(activeView==='markets')renderMarketsTab(marketsRange);
+  else if(activeView==='heatmap')renderHeatmap(heatmapRange);
+  else if(activeView==='macro')renderMacroTab();
+
+  // PHASE 2 — fundamentals + news (background, non-blocking render)
   await Promise.allSettled([
     ...EQUITY_SYMS.map(fetchAnalyst),
     ...EQUITY_SYMS.map(fetchEarnings),
@@ -2800,14 +2807,16 @@ async function loadAll(){
     ...PEER_SYMS.map(fetchPeerNews),
   ]);
 
-  // Long history for signals + 52W range (parallel)
+  // Re-render brief with news now loaded
+  renderBrief();
+  if(activeView==='earnings')renderEarnings();
+  else if(activeView==='news')renderNewsTab();
+  else if(activeView==='industry')renderIndustryTab();
+
+  // PHASE 3 — long history for signals (slowest, load last)
   await Promise.allSettled([
     ...EQUITY_SYMS.map(fetchLongHist),
     ...PEER_SYMS.map(s=>fetchLongHist(s).then(()=>{})),
-  ]);
-
-  // Short history for sparklines + pre-cache sector/index/peer charts
-  await Promise.allSettled([
     ...ALL.map(s=>fetchHist(s,'1W').then(h=>{if(h)HIST[s]=h;})),
     ...INDICES.map(s=>fetchHist(s,'1W').then(h=>{if(h)HIST[s]=h;})),
     ...SECTOR_ETFS.map(s=>fetchHist(s,'1W').then(h=>{if(h)HIST[s]=h;})),
@@ -2819,10 +2828,9 @@ async function loadAll(){
   btn.classList.remove('loading');
   isLoading=false;
 
-  // Render current view
+  // Final render with all data — signals, history charts now available
   renderBrief();
-  if(document.getElementById('view-brief')) zeus_renderBrief();
-  if(activeView==='portfolio'){renderPortfolioCards();renderAllocChart();renderWinLossChart();}
+  if(activeView==='portfolio'){renderPortfolioCards();renderAllocChart();renderWinLossChart();renderPortfolioChart(portfolioRange);}
   else if(activeView==='markets')renderMarketsTab(marketsRange);
   else if(activeView==='signals')renderSignals();
   else if(activeView==='heatmap')renderHeatmap(heatmapRange);
