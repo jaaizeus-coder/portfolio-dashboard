@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>John's Portfolio Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{--bg:#030712;--card:#0f172a;--card2:#111827;--border:#1e2535;--text:#e2e8f0;--muted:#6b7280;--blue:#3b82f6;--green:#22c55e;--red:#ef4444;--yellow:#f59e0b;--purple:#a855f7}
+  body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+
+  /* ── Header ── */
+  .header{background:linear-gradient(135deg,#0f172a,#1e3a5f);border-bottom:1px solid #1e3a5f;padding:18px 28px;display:flex;justify-content:space-between;align-items:center}
+  .header-left h1{font-size:1.35rem;font-weight:800;color:#fff}
+  .header-left h1 span{color:var(--blue)}
+  .header-sub{font-size:0.72rem;color:#64748b;margin-top:2px}
+  .header-right{display:flex;align-items:center;gap:16px}
+  .refresh-btn{background:rgba(59,130,246,0.15);border:1px solid rgba(59,130,246,0.3);color:var(--blue);padding:7px 16px;border-radius:8px;cursor:pointer;font-size:0.78rem;font-weight:600;font-family:'Inter',sans-serif;transition:all 0.2s}
+  .refresh-btn:hover{background:rgba(59,130,246,0.25)}
+  .last-update{font-size:0.7rem;color:#4b5563}
+  .live-dot{width:7px;height:7px;border-radius:50%;background:var(--green);display:inline-block;margin-right:5px;animation:pulse 2s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+
+  /* ── Nav ── */
+  .nav{background:var(--card);border-bottom:1px solid var(--border);padding:0 28px;display:flex;gap:2px;overflow-x:auto}
+  .nav::-webkit-scrollbar{display:none}
+  .nav-btn{background:none;border:none;color:var(--muted);cursor:pointer;font-size:0.82rem;font-weight:500;padding:13px 16px;border-bottom:3px solid transparent;transition:all 0.2s;white-space:nowrap;font-family:'Inter',sans-serif}
+  .nav-btn:hover{color:var(--text)}
+  .nav-btn.active{color:var(--blue);border-bottom-color:var(--blue)}
+
+  /* ── Main ── */
+  main{padding:22px 28px;max-width:1400px;margin:0 auto}
+
+  /* ── KPI row ── */
+  .kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:22px}
+  .kpi{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;position:relative;overflow:hidden;transition:border-color 0.2s,transform 0.15s}
+  .kpi:hover{border-color:#374151;transform:translateY(-1px)}
+  .kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+  .kpi.b::before{background:var(--blue)}.kpi.g::before{background:var(--green)}
+  .kpi.p::before{background:var(--purple)}.kpi.y::before{background:var(--yellow)}
+  .kpi.r::before{background:var(--red)}
+  .kpi-label{font-size:0.62rem;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:6px;font-weight:600}
+  .kpi-val{font-size:1.35rem;font-weight:800;color:#fff;line-height:1}
+  .kpi-chg{font-size:0.7rem;margin-top:5px;font-weight:600}
+  .up{color:var(--green)}.dn{color:var(--red)}.nt{color:var(--muted)}
+
+  /* ── Cards grid ── */
+  .cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;margin-bottom:22px}
+  .stock-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px;transition:border-color 0.2s}
+  .stock-card:hover{border-color:#374151}
+  .sc-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px}
+  .sc-sym{font-size:1.1rem;font-weight:800;color:#fff}
+  .sc-name{font-size:0.68rem;color:var(--muted);margin-top:2px}
+  .sc-price{font-size:1.5rem;font-weight:800;color:#fff;line-height:1}
+  .sc-chg{font-size:0.82rem;font-weight:700;margin-top:3px}
+  .sc-chart{margin:10px 0 8px;height:70px;position:relative}
+  .sc-meta{display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:0.72rem;color:var(--muted);margin-top:8px}
+  .sc-meta-item span{color:var(--text);font-weight:500}
+  .sc-analyst{margin-top:10px;padding-top:10px;border-top:1px solid var(--border);font-size:0.72rem}
+  .consensus-badge{display:inline-block;padding:2px 10px;border-radius:8px;font-weight:700;font-size:0.68rem;margin-right:6px}
+  .badge-buy{background:rgba(34,197,94,0.15);color:var(--green);border:1px solid rgba(34,197,94,0.25)}
+  .badge-hold{background:rgba(245,158,11,0.15);color:var(--yellow);border:1px solid rgba(245,158,11,0.25)}
+  .badge-sell{background:rgba(239,68,68,0.15);color:var(--red);border:1px solid rgba(239,68,68,0.25)}
+  .sc-news{margin-top:10px;padding-top:10px;border-top:1px solid var(--border)}
+  .news-item{font-size:0.74rem;padding:6px 0;border-bottom:1px solid #0f172a;color:var(--muted);line-height:1.4}
+  .news-item:last-child{border-bottom:none}
+  .news-item a{color:#93c5fd;text-decoration:none}
+  .news-item a:hover{color:#60a5fa}
+  .news-src{font-size:0.62rem;background:rgba(59,130,246,0.1);color:#60a5fa;padding:1px 6px;border-radius:6px;margin-left:4px}
+
+  /* ── Sector heat map ── */
+  .heatmap{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px;margin-bottom:22px}
+  .heat-cell{border-radius:10px;padding:14px 10px;text-align:center;cursor:pointer;transition:transform 0.15s}
+  .heat-cell:hover{transform:scale(1.04)}
+  .heat-sym{font-size:0.82rem;font-weight:700;color:#fff}
+  .heat-pct{font-size:0.78rem;font-weight:600;margin-top:3px}
+
+  /* ── Chart cards ── */
+  .chart-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:18px}
+  .chart-title{font-size:0.88rem;font-weight:700;color:#fff;margin-bottom:3px}
+  .chart-sub{font-size:0.7rem;color:var(--muted);margin-bottom:16px}
+  .chart-wrap{position:relative;height:280px}
+  .chart-wrap.tall{height:340px}
+  .chart-wrap.short{height:180px}
+  .charts-2col{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+
+  /* ── Earnings table ── */
+  .earnings-table{width:100%;border-collapse:collapse;font-size:0.8rem}
+  .earnings-table th{background:#0a0f1c;color:var(--muted);font-weight:600;text-transform:uppercase;font-size:0.65rem;letter-spacing:1px;padding:10px 14px;text-align:left;border-bottom:1px solid var(--border)}
+  .earnings-table td{padding:10px 14px;border-bottom:1px solid #0f172a;color:var(--text)}
+  .earnings-table tr:hover td{background:#0f172a}
+  .beat{color:var(--green)} .miss{color:var(--red)}
+
+  /* ── Loader ── */
+  .loading{text-align:center;padding:60px;color:var(--muted);font-size:0.9rem}
+  .spinner{width:32px;height:32px;border:3px solid #1e2535;border-top-color:var(--blue);border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 16px}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  .hidden{display:none!important}
+  .section-label{font-size:0.68rem;text-transform:uppercase;letter-spacing:2px;color:var(--muted);font-weight:600;margin:20px 0 12px;padding-left:2px}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <h1>John's <span>Portfolio</span> Dashboard</h1>
+    <div class="header-sub"><span class="live-dot"></span>Live data · Finnhub + Yahoo Finance · Personal use only</div>
+  </div>
+  <div class="header-right">
+    <div class="last-update" id="last-update">Loading...</div>
+    <button class="refresh-btn" onclick="loadAll()">⟳ Refresh</button>
+  </div>
+</div>
+
+<div class="nav">
+  <button class="nav-btn active" data-view="overview">📊 Overview</button>
+  <button class="nav-btn" data-view="equities">📈 Equities</button>
+  <button class="nav-btn" data-view="crypto">₿ Crypto</button>
+  <button class="nav-btn" data-view="heatmap">🌡️ Heat Map</button>
+  <button class="nav-btn" data-view="earnings">📅 Earnings</button>
+  <button class="nav-btn" data-view="news">📰 News Feed</button>
+</div>
+
+<main>
+
+<!-- OVERVIEW -->
+<div id="view-overview">
+  <div class="kpi-row" id="kpi-row">
+    <div class="loading"><div class="spinner"></div>Loading portfolio...</div>
+  </div>
+  <div class="section-label">Portfolio Performance</div>
+  <div class="charts-2col">
+    <div class="chart-card">
+      <div class="chart-title">Equities — Daily Change %</div>
+      <div class="chart-sub">All stocks sorted by performance today</div>
+      <div class="chart-wrap"><canvas id="overviewBarChart"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Crypto — 24h Performance</div>
+      <div class="chart-sub">BTC · ETH · SOL · BNB</div>
+      <div class="chart-wrap"><canvas id="cryptoBarChart"></canvas></div>
+    </div>
+  </div>
+  <div class="section-label">Top Movers</div>
+  <div class="cards-grid" id="top-movers-grid"></div>
+</div>
+
+<!-- EQUITIES -->
+<div id="view-equities" class="hidden">
+  <div class="cards-grid" id="equities-grid">
+    <div class="loading"><div class="spinner"></div>Loading equities...</div>
+  </div>
+</div>
+
+<!-- CRYPTO -->
+<div id="view-crypto" class="hidden">
+  <div class="cards-grid" id="crypto-grid">
+    <div class="loading"><div class="spinner"></div>Loading crypto...</div>
+  </div>
+</div>
+
+<!-- HEATMAP -->
+<div id="view-heatmap" class="hidden">
+  <div class="section-label">Portfolio Heat Map — Daily % Change</div>
+  <div class="heatmap" id="heatmap-grid"></div>
+  <div class="section-label">Relative Performance — 10-Day Trend</div>
+  <div class="chart-card">
+    <div class="chart-title">All Holdings — 10-Day Price Change %</div>
+    <div class="chart-sub">Normalized from 10 days ago = 0%</div>
+    <div class="chart-wrap tall"><canvas id="trendChart"></canvas></div>
+  </div>
+</div>
+
+<!-- EARNINGS -->
+<div id="view-earnings" class="hidden">
+  <div class="chart-card">
+    <div class="chart-title">Upcoming Earnings Calendar</div>
+    <div class="chart-sub">Next 60 days · Your holdings only</div>
+    <div id="earnings-table-wrap" style="overflow-x:auto;margin-top:8px">
+      <div class="loading"><div class="spinner"></div>Loading earnings data...</div>
+    </div>
+  </div>
+  <div class="chart-card" style="margin-top:18px">
+    <div class="chart-title">Recent EPS — Actual vs Estimate</div>
+    <div class="chart-sub">Last 4 quarters per holding</div>
+    <div class="chart-wrap tall"><canvas id="epsChart"></canvas></div>
+  </div>
+</div>
+
+<!-- NEWS -->
+<div id="view-news" class="hidden">
+  <div class="cards-grid" id="news-grid">
+    <div class="loading"><div class="spinner"></div>Loading news feed...</div>
+  </div>
+</div>
+
+</main>
+
+<script>
+const FINNHUB_KEY = 'd6rq7f9r01qrri553rc0d6rq7f9r01qrri553rcg';
+const STOCKS  = ['AAPL','ARKB','BROS','COIN','F','META','NVDA','PLTR','TSLA','FXAIX'];
+const CRYPTOS = ['BTC','ETH','SOL','BNB'];
+const CRYPTO_IDS = {BTC:'bitcoin',ETH:'ethereum',SOL:'solana',BNB:'binancecoin'};
+const ALL = [...STOCKS, ...CRYPTOS];
+
+const C = {blue:'#3b82f6',green:'#22c55e',red:'#ef4444',yellow:'#f59e0b',purple:'#a855f7',teal:'#14b8a6',orange:'#f97316',pink:'#ec4899'};
+const COLORS = [C.blue,C.green,C.red,C.yellow,C.purple,C.teal,C.orange,C.pink,'#6366f1','#84cc16','#06b6d4','#f43f5e','#8b5cf6','#10b981'];
+const GRID = 'rgba(255,255,255,0.04)';
+const FONT = '#6b7280';
+
+Chart.defaults.color = FONT;
+Chart.defaults.borderColor = GRID;
+Chart.defaults.font.family = "Inter, -apple-system, sans-serif";
+
+let DATA = {}, HIST = {}, ANALYST = {}, EARNINGS = {}, NEWS_CACHE = {};
+let charts = {};
+
+// ── Fetch helpers ──────────────────────────────────────────────
+async function fhGet(path) {
+  const r = await fetch(`https://finnhub.io/api/v1/${path}&token=${FINNHUB_KEY}`);
+  return r.json();
+}
+async function cgGet(path) {
+  const r = await fetch(`https://api.coingecko.com/api/v3/${path}`);
+  return r.json();
+}
+async function yfGet(symbol) {
+  const r = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=14d`);
+  return r.json();
+}
+
+// ── Price fetching ─────────────────────────────────────────────
+async function fetchStock(sym) {
+  try {
+    const q = await fhGet(`quote?symbol=${sym}`);
+    if (q && q.c) {
+      DATA[sym] = {symbol:sym, price:q.c, change:q.d, pct:q.dp, high:q.h, low:q.l, open:q.o, prevClose:q.pc, type:'stock'};
+    }
+  } catch(e) {}
+}
+
+async function fetchCrypto(sym) {
+  try {
+    const id = CRYPTO_IDS[sym];
+    const d = await cgGet(`simple/price?ids=${id}&vs_currencies=usd&include_24hr_change=true&include_24hr_vol=true&include_market_cap=true`);
+    if (d && d[id]) {
+      DATA[sym] = {symbol:sym, price:d[id].usd, pct:d[id].usd_24h_change, volume:d[id].usd_24h_vol, mcap:d[id].usd_market_cap, type:'crypto'};
+    }
+  } catch(e) {}
+}
+
+async function fetchHistory(sym) {
+  try {
+    const cs = sym === 'BTC' ? 'BTC-USD' : sym === 'ETH' ? 'ETH-USD' : sym === 'SOL' ? 'SOL-USD' : sym === 'BNB' ? 'BNB-USD' : sym;
+    const d = await yfGet(cs);
+    const result = d?.chart?.result?.[0];
+    if (!result) return;
+    const closes = result.indicators.quote[0].close;
+    const ts = result.timestamp;
+    const pairs = ts.map((t,i) => [t, closes[i]]).filter(([,c]) => c != null).slice(-10);
+    HIST[sym] = {
+      labels: pairs.map(([t]) => new Date(t*1000).toLocaleDateString('en-US',{month:'numeric',day:'numeric'})),
+      prices: pairs.map(([,c]) => parseFloat(c.toFixed(2)))
+    };
+  } catch(e) {}
+}
+
+async function fetchAnalyst(sym) {
+  try {
+    const [rec, pt] = await Promise.all([
+      fhGet(`stock/recommendation?symbol=${sym}`),
+      fhGet(`stock/price-target?symbol=${sym}`)
+    ]);
+    const r = rec?.[0] || {};
+    const total = (r.strongBuy||0)+(r.buy||0)+(r.hold||0)+(r.sell||0)+(r.strongSell||0);
+    const bulls = (r.strongBuy||0)+(r.buy||0);
+    const bears = (r.sell||0)+(r.strongSell||0);
+    const bullPct = total > 0 ? bulls/total*100 : 0;
+    ANALYST[sym] = {
+      consensus: bullPct>=70?'Strong Buy':bullPct>=55?'Buy':bullPct>=40?'Hold':'Sell',
+      buy:bulls, hold:r.hold||0, sell:bears, total,
+      ptMean:pt?.targetMean, ptHigh:pt?.targetHigh, ptLow:pt?.targetLow
+    };
+  } catch(e) {}
+}
+
+async function fetchEarnings(sym) {
+  try {
+    const [hist, upcoming] = await Promise.all([
+      fhGet(`stock/earnings?symbol=${sym}&limit=4`),
+      fhGet(`calendar/earnings?symbol=${sym}&from=${new Date().toISOString().split('T')[0]}&to=${new Date(Date.now()+60*24*3600*1000).toISOString().split('T')[0]}`)
+    ]);
+    EARNINGS[sym] = {
+      history: Array.isArray(hist) ? hist : [],
+      upcoming: upcoming?.earningsCalendar || []
+    };
+  } catch(e) { EARNINGS[sym] = {history:[],upcoming:[]}; }
+}
+
+async function fetchNews(sym) {
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    const week = new Date(Date.now()-7*24*3600*1000).toISOString().split('T')[0];
+    const d = await fhGet(`company-news?symbol=${sym}&from=${week}&to=${today}`);
+    NEWS_CACHE[sym] = Array.isArray(d) ? d.filter(n=>n.headline).slice(0,4) : [];
+  } catch(e) { NEWS_CACHE[sym] = []; }
+}
+
+// ── Formatting ─────────────────────────────────────────────────
+const fmtP = p => p >= 1000 ? `$${p.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}` : `$${p?.toFixed(2)||'—'}`;
+const fmtPct = p => p == null ? '—' : `${p>=0?'+':''}${p.toFixed(2)}%`;
+const fmtVol = n => {if(!n)return'—';if(n>=1e9)return`$${(n/1e9).toFixed(2)}B`;if(n>=1e6)return`$${(n/1e6).toFixed(1)}M`;return`$${(n/1e3).toFixed(0)}K`};
+const pctCol = p => p >= 0 ? 'var(--green)' : 'var(--red)';
+const arrow = p => p >= 0 ? '▲' : '▼';
+const heatColor = pct => {
+  if(pct >= 3) return {bg:'rgba(34,197,94,0.25)',border:'rgba(34,197,94,0.5)',text:'#4ade80'};
+  if(pct >= 1) return {bg:'rgba(34,197,94,0.12)',border:'rgba(34,197,94,0.25)',text:'#86efac'};
+  if(pct >= -1) return {bg:'rgba(100,116,139,0.15)',border:'rgba(100,116,139,0.3)',text:'#94a3b8'};
+  if(pct >= -3) return {bg:'rgba(239,68,68,0.12)',border:'rgba(239,68,68,0.25)',text:'#fca5a5'};
+  return {bg:'rgba(239,68,68,0.25)',border:'rgba(239,68,68,0.5)',text:'#f87171'};
+};
+const badgeClass = c => c?.includes('Buy') ? 'badge-buy' : c === 'Hold' ? 'badge-hold' : 'badge-sell';
+
+function dc(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
+
+// ── Mini sparkline ─────────────────────────────────────────────
+function renderSparkline(canvasId, prices, color) {
+  dc(canvasId);
+  const canvas = document.getElementById(canvasId);
+  if (!canvas || !prices?.length) return;
+  charts[canvasId] = new Chart(canvas, {
+    type:'line',
+    data:{labels:prices.map((_,i)=>i),datasets:[{data:prices,borderColor:color,backgroundColor:color+'22',fill:true,tension:0.4,pointRadius:0,borderWidth:2}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{enabled:false}},
+      scales:{x:{display:false},y:{display:false}},animation:{duration:400}}
+  });
+}
+
+// ── KPI row ────────────────────────────────────────────────────
+function renderKPIs() {
+  const allPcts = Object.values(DATA).map(d=>d.pct).filter(p=>p!=null);
+  const gainers = Object.values(DATA).filter(d=>d.pct>0).length;
+  const losers  = Object.values(DATA).filter(d=>d.pct<0).length;
+  const avgPct  = allPcts.length ? allPcts.reduce((a,b)=>a+b,0)/allPcts.length : 0;
+  const best    = Object.values(DATA).sort((a,b)=>b.pct-a.pct)[0];
+  const worst   = Object.values(DATA).sort((a,b)=>a.pct-b.pct)[0];
+
+  document.getElementById('kpi-row').innerHTML = `
+    <div class="kpi b"><div class="kpi-label">Portfolio Avg</div><div class="kpi-val" style="color:${pctCol(avgPct)}">${fmtPct(avgPct)}</div><div class="kpi-chg nt">${ALL.length} holdings tracked</div></div>
+    <div class="kpi g"><div class="kpi-label">Gainers Today</div><div class="kpi-val" style="color:var(--green)">${gainers}</div><div class="kpi-chg up">▲ in the green</div></div>
+    <div class="kpi r"><div class="kpi-label">Losers Today</div><div class="kpi-val" style="color:var(--red)">${losers}</div><div class="kpi-chg dn">▼ in the red</div></div>
+    <div class="kpi g"><div class="kpi-label">Top Gainer</div><div class="kpi-val">${best?.symbol||'—'}</div><div class="kpi-chg up">${fmtPct(best?.pct)}</div></div>
+    <div class="kpi r"><div class="kpi-label">Top Loser</div><div class="kpi-val">${worst?.symbol||'—'}</div><div class="kpi-chg dn">${fmtPct(worst?.pct)}</div></div>
+    <div class="kpi p"><div class="kpi-label">BTC Price</div><div class="kpi-val">${fmtP(DATA.BTC?.price)}</div><div class="kpi-chg ${DATA.BTC?.pct>=0?'up':'dn'}">${fmtPct(DATA.BTC?.pct)}</div></div>`;
+}
+
+// ── Stock card ─────────────────────────────────────────────────
+function stockCardHTML(sym, showNews=false, showAnalyst=true) {
+  const d = DATA[sym];
+  if (!d) return `<div class="stock-card"><div class="sc-sym">${sym}</div><div style="color:var(--muted);font-size:0.8rem;margin-top:8px;">Data unavailable</div></div>`;
+  const col = pctCol(d.pct);
+  const hist = HIST[sym];
+  const an = ANALYST[sym];
+  const news = NEWS_CACHE[sym] || [];
+  const sparkId = `spark-${sym}-${Date.now()}`;
+
+  let analystHTML = '';
+  if (showAnalyst && an && an.total > 0) {
+    const upside = an.ptMean && d.price ? ((an.ptMean - d.price)/d.price*100) : null;
+    analystHTML = `<div class="sc-analyst">
+      <span class="consensus-badge ${badgeClass(an.consensus)}">${an.consensus}</span>
+      <span style="color:var(--muted);font-size:0.68rem;">${an.buy} Buy / ${an.hold} Hold / ${an.sell} Sell</span>
+      ${an.ptMean ? `<div style="margin-top:5px;font-size:0.7rem;color:var(--muted);">PT <strong style="color:var(--text);">${fmtP(an.ptMean)}</strong> ${upside!=null?`<span style="color:${pctCol(upside)}">(${fmtPct(upside)} upside)</span>`:''}</div>` : ''}
+    </div>`;
+  }
+
+  let newsHTML = '';
+  if (showNews && news.length) {
+    const items = news.slice(0,3).map(n=>`
+      <div class="news-item">
+        <a href="${n.url}" target="_blank">${n.headline.slice(0,85)}${n.headline.length>85?'…':''}</a>
+        ${n.source?`<span class="news-src">${n.source}</span>`:''}
+      </div>`).join('');
+    newsHTML = `<div class="sc-news"><div style="font-size:0.62rem;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:6px;">📰 Headlines</div>${items}</div>`;
+  }
+
+  const metaRows = d.type === 'crypto'
+    ? `<div class="sc-meta-item">Volume <span>${fmtVol(d.volume)}</span></div><div class="sc-meta-item">Mkt Cap <span>${fmtVol(d.mcap)}</span></div>`
+    : `<div class="sc-meta-item">High <span>${fmtP(d.high)}</span></div><div class="sc-meta-item">Low <span>${fmtP(d.low)}</span></div>`;
+
+  return `<div class="stock-card">
+    <div class="sc-top">
+      <div><div class="sc-sym">${sym}</div></div>
+      <div style="text-align:right"><div class="sc-price">${fmtP(d.price)}</div><div class="sc-chg" style="color:${col}">${arrow(d.pct)} ${fmtPct(d.pct)}</div></div>
+    </div>
+    <div class="sc-chart"><canvas id="${sparkId}"></canvas></div>
+    <div class="sc-meta">${metaRows}</div>
+    ${analystHTML}${newsHTML}
+  </div>`;
+}
+
+// ── Overview bar charts ────────────────────────────────────────
+function renderOverviewCharts() {
+  const stockSyms = STOCKS.filter(s=>DATA[s]?.pct!=null).sort((a,b)=>DATA[b].pct-DATA[a].pct);
+  const stockPcts = stockSyms.map(s=>DATA[s].pct);
+  const stockCols = stockPcts.map(p=>p>=0?'rgba(34,197,94,0.8)':'rgba(239,68,68,0.8)');
+
+  dc('overviewBarChart');
+  charts['overviewBarChart'] = new Chart(document.getElementById('overviewBarChart'), {
+    type:'bar',
+    data:{labels:stockSyms, datasets:[{data:stockPcts,backgroundColor:stockCols,borderRadius:6,borderSkipped:false}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>`${fmtPct(ctx.parsed.y)}`},backgroundColor:'#1e2535',titleColor:'#fff',bodyColor:'#e2e8f0',padding:10,cornerRadius:8}},
+      scales:{x:{grid:{color:GRID},ticks:{color:FONT}},y:{grid:{color:GRID},ticks:{color:FONT,callback:v=>`${v>0?'+':''}${v.toFixed(1)}%`}}},
+      interaction:{mode:'index',intersect:false}}
+  });
+
+  const cryptoPcts = CRYPTOS.filter(s=>DATA[s]?.pct!=null).map(s=>DATA[s].pct);
+  const cryptoCols = cryptoPcts.map(p=>p>=0?'rgba(59,130,246,0.8)':'rgba(239,68,68,0.8)');
+  dc('cryptoBarChart');
+  charts['cryptoBarChart'] = new Chart(document.getElementById('cryptoBarChart'), {
+    type:'bar',
+    data:{labels:CRYPTOS.filter(s=>DATA[s]?.pct!=null), datasets:[{data:cryptoPcts,backgroundColor:cryptoCols,borderRadius:6,borderSkipped:false}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>`${fmtPct(ctx.parsed.y)}`},backgroundColor:'#1e2535',titleColor:'#fff',bodyColor:'#e2e8f0',padding:10,cornerRadius:8}},
+      scales:{x:{grid:{color:GRID},ticks:{color:FONT}},y:{grid:{color:GRID},ticks:{color:FONT,callback:v=>`${v>0?'+':''}${v.toFixed(1)}%`}}},
+      interaction:{mode:'index',intersect:false}}
+  });
+}
+
+// ── Trend chart ────────────────────────────────────────────────
+function renderTrendChart() {
+  const syms = ALL.filter(s=>HIST[s]?.prices?.length>=3);
+  const maxLen = Math.max(...syms.map(s=>HIST[s].prices.length));
+  const labels = HIST[syms[0]]?.labels?.slice(-maxLen) || [];
+
+  const datasets = syms.map((s,i) => {
+    const prices = HIST[s].prices;
+    const base = prices[0];
+    const normalized = prices.map(p => parseFloat(((p-base)/base*100).toFixed(2)));
+    return {label:s, data:normalized, borderColor:COLORS[i%COLORS.length], backgroundColor:'transparent', tension:0.3, pointRadius:0, pointHoverRadius:5, borderWidth:2};
+  });
+
+  dc('trendChart');
+  charts['trendChart'] = new Chart(document.getElementById('trendChart'), {
+    type:'line',
+    data:{labels, datasets},
+    options:{responsive:true,maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
+      plugins:{legend:{labels:{color:FONT,boxWidth:10,padding:12,usePointStyle:true,pointStyle:'circle'}},
+        tooltip:{backgroundColor:'#1e2535',titleColor:'#fff',bodyColor:'#e2e8f0',padding:12,cornerRadius:8,callbacks:{label:ctx=>`${ctx.dataset.label}: ${ctx.parsed.y>=0?'+':''}${ctx.parsed.y.toFixed(2)}%`}}},
+      scales:{x:{grid:{color:GRID},ticks:{color:FONT}},y:{grid:{color:GRID},ticks:{color:FONT,callback:v=>`${v>=0?'+':''}${v.toFixed(1)}%`}}}}
+  });
+}
+
+// ── Heatmap ────────────────────────────────────────────────────
+function renderHeatmap() {
+  const grid = document.getElementById('heatmap-grid');
+  grid.innerHTML = ALL.map(sym => {
+    const d = DATA[sym];
+    if (!d) return '';
+    const {bg,border,text} = heatColor(d.pct||0);
+    return `<div class="heat-cell" style="background:${bg};border:1px solid ${border}" onclick="showView('equities')">
+      <div class="heat-sym">${sym}</div>
+      <div class="heat-pct" style="color:${text}">${arrow(d.pct)} ${fmtPct(d.pct)}</div>
+      <div style="font-size:0.62rem;color:${text}99;margin-top:2px;">${fmtP(d.price)}</div>
+    </div>`;
+  }).join('');
+  renderTrendChart();
+}
+
+// ── Earnings ───────────────────────────────────────────────────
+function renderEarnings() {
+  const upcoming = [];
+  STOCKS.forEach(sym => {
+    (EARNINGS[sym]?.upcoming||[]).forEach(e => upcoming.push({...e, symbol:sym}));
+  });
+  upcoming.sort((a,b)=>a.date.localeCompare(b.date));
+
+  const tableHTML = upcoming.length
+    ? `<table class="earnings-table">
+        <thead><tr><th>Symbol</th><th>Date</th><th>EPS Estimate</th><th>Revenue Est.</th><th>Quarter</th></tr></thead>
+        <tbody>${upcoming.map(e=>`<tr>
+          <td style="font-weight:700;color:var(--blue)">${e.symbol}</td>
+          <td>${e.date}</td>
+          <td>${e.epsEstimate ? `$${e.epsEstimate}` : '—'}</td>
+          <td>${e.revenueEstimate ? fmtVol(e.revenueEstimate) : '—'}</td>
+          <td>Q${e.quarter||'?'} ${e.year||''}</td>
+        </tr>`).join('')}</tbody>
+      </table>`
+    : '<div style="color:var(--muted);padding:20px;font-size:0.85rem;">No upcoming earnings in the next 60 days.</div>';
+
+  document.getElementById('earnings-table-wrap').innerHTML = tableHTML;
+
+  // EPS beat/miss chart
+  const epsSym = STOCKS.filter(s=>(EARNINGS[s]?.history||[]).length>0).slice(0,6);
+  if (epsSym.length) {
+    const labels = epsSym;
+    const actuals  = epsSym.map(s=>EARNINGS[s].history[0]?.actual||0);
+    const estimates= epsSym.map(s=>EARNINGS[s].history[0]?.estimate||0);
+    dc('epsChart');
+    charts['epsChart'] = new Chart(document.getElementById('epsChart'), {
+      type:'bar',
+      data:{labels, datasets:[
+        {label:'Actual EPS',data:actuals,backgroundColor:'rgba(34,197,94,0.7)',borderRadius:5},
+        {label:'Estimated EPS',data:estimates,backgroundColor:'rgba(59,130,246,0.5)',borderRadius:5}
+      ]},
+      options:{responsive:true,maintainAspectRatio:false,
+        interaction:{mode:'index',intersect:false},
+        plugins:{legend:{labels:{color:FONT}},tooltip:{backgroundColor:'#1e2535',titleColor:'#fff',bodyColor:'#e2e8f0',padding:10,cornerRadius:8}},
+        scales:{x:{grid:{color:GRID},ticks:{color:FONT}},y:{grid:{color:GRID},ticks:{color:FONT,callback:v=>`$${v.toFixed(2)}`}}}}
+    });
+  }
+}
+
+// ── News feed ──────────────────────────────────────────────────
+function renderNewsFeed() {
+  const grid = document.getElementById('news-grid');
+  grid.innerHTML = STOCKS.filter(s=>NEWS_CACHE[s]?.length>0).map(sym => {
+    const items = NEWS_CACHE[sym].map(n=>`
+      <div class="news-item">
+        <a href="${n.url}" target="_blank">${n.headline.slice(0,90)}${n.headline.length>90?'…':''}</a>
+        ${n.source?`<span class="news-src">${n.source}</span>`:''}
+      </div>`).join('');
+    return `<div class="stock-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <div style="font-size:1rem;font-weight:800;color:#fff">${sym}</div>
+        <div style="font-size:0.8rem;color:${pctCol(DATA[sym]?.pct||0)};font-weight:600">${fmtPct(DATA[sym]?.pct)}</div>
+      </div>
+      ${items}
+    </div>`;
+  }).join('');
+}
+
+// ── Render all views ───────────────────────────────────────────
+function renderAll() {
+  renderKPIs();
+  renderOverviewCharts();
+
+  // Top movers
+  const sorted = ALL.filter(s=>DATA[s]?.pct!=null).sort((a,b)=>Math.abs(DATA[b].pct)-Math.abs(DATA[a].pct)).slice(0,4);
+  document.getElementById('top-movers-grid').innerHTML = sorted.map(s=>stockCardHTML(s,true,true)).join('');
+  sorted.forEach(s=>{
+    const hist = HIST[s];
+    if(hist?.prices){
+      const sparkId = document.querySelector(`#top-movers-grid canvas[id^="spark-${s}"]`)?.id;
+      if(sparkId) renderSparkline(sparkId, hist.prices, pctCol(DATA[s].pct));
+    }
+  });
+
+  // Equities
+  document.getElementById('equities-grid').innerHTML = STOCKS.map(s=>stockCardHTML(s,true,true)).join('');
+  STOCKS.forEach(s=>{
+    const hist = HIST[s];
+    if(hist?.prices){
+      const canvas = document.querySelector(`#equities-grid canvas[id^="spark-${s}"]`);
+      if(canvas) renderSparkline(canvas.id, hist.prices, pctCol(DATA[s]?.pct||0));
+    }
+  });
+
+  // Crypto
+  document.getElementById('crypto-grid').innerHTML = CRYPTOS.map(s=>stockCardHTML(s,true,false)).join('');
+  CRYPTOS.forEach(s=>{
+    const hist = HIST[s];
+    if(hist?.prices){
+      const canvas = document.querySelector(`#crypto-grid canvas[id^="spark-${s}"]`);
+      if(canvas) renderSparkline(canvas.id, hist.prices, pctCol(DATA[s]?.pct||0));
+    }
+  });
+
+  renderHeatmap();
+  renderEarnings();
+  renderNewsFeed();
+
+  document.getElementById('last-update').innerHTML = `<span class="live-dot"></span>Updated ${new Date().toLocaleTimeString()}`;
+}
+
+// ── Navigation ─────────────────────────────────────────────────
+function showView(view) {
+  document.querySelectorAll('[id^="view-"]').forEach(el=>el.classList.add('hidden'));
+  document.getElementById(`view-${view}`)?.classList.remove('hidden');
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelector(`[data-view="${view}"]`)?.classList.add('active');
+}
+document.querySelectorAll('.nav-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>showView(btn.dataset.view));
+});
+
+// ── Load all data ──────────────────────────────────────────────
+async function loadAll() {
+  document.getElementById('last-update').textContent = 'Loading...';
+
+  await Promise.allSettled([
+    ...STOCKS.map(fetchStock),
+    ...CRYPTOS.map(fetchCrypto),
+  ]);
+
+  await Promise.allSettled([
+    ...ALL.map(fetchHistory),
+    ...STOCKS.filter(s=>!['ARKB','FXAIX'].includes(s)).map(fetchAnalyst),
+    ...STOCKS.filter(s=>!['ARKB','FXAIX'].includes(s)).map(fetchEarnings),
+    ...STOCKS.filter(s=>!['ARKB','FXAIX'].includes(s)).map(fetchNews),
+  ]);
+
+  renderAll();
+}
+
+// ── Init ───────────────────────────────────────────────────────
+loadAll();
+// Auto-refresh every 5 minutes
+setInterval(loadAll, 5 * 60 * 1000);
+</script>
+</body>
+</html>
