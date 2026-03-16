@@ -1357,7 +1357,7 @@ async function fetchHist(sym,rangeKey='1W'){
   try{
     if(CRYPTOS.includes(sym)){
       const id=CG_IDS[sym];
-      const cgDays={1D:1,1W:7,1M:30,'3M':90,YTD:365};
+      const cgDays={'1D':1,'1W':7,'1M':30,'3M':90,'YTD':365};
       const days=cgDays[rangeKey]||7;
       const d=await cgMarket(id,days);
       if(!d?.prices?.length) return null;
