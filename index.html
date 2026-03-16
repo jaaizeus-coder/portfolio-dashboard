@@ -1001,12 +1001,13 @@ const SECTOR_NAMES = {
 const MACRO_SYMS = ['GLD','USO','TLT','UUP'];
 const MACRO_LABELS = {GLD:'Gold ETF',USO:'Oil ETF',TLT:'Bonds 20Y',UUP:'US Dollar'};
 
+// Finnhub candle resolution + days-back
 const RANGE_CFG = {
-  '1D':{range:'5d',  interval:'1d'},
-  '1W':{range:'5d',  interval:'1d'},
-  '1M':{range:'1mo', interval:'1d'},
-  '3M':{range:'3mo', interval:'1wk'},
-  'YTD':{range:'ytd',interval:'1wk'},
+  '1D' :{days:2,   res:'D'},
+  '1W' :{days:7,   res:'D'},
+  '1M' :{days:30,  res:'D'},
+  '3M' :{days:90,  res:'D'},
+  'YTD':{days:'ytd',res:'D'},
 };
 
 /* ══════════════════════════════════════════════
@@ -1122,9 +1123,18 @@ async function fhGet(path){
     return r.json();
   }catch(e){return null;}
 }
-async function yfGet(sym,range='5d',interval='1d'){
+// Yahoo removed — CORS blocked. Use Finnhub candles instead.
+function ytdFrom(){const n=new Date();return Math.floor(new Date(n.getFullYear(),0,1)/1000);}
+async function fhCandles(sym,from,to,res='D'){
   try{
-    const r=await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${sym}?interval=${interval}&range=${range}`);
+    const r=await fhGet(`stock/candle?symbol=${sym}&resolution=${res}&from=${from}&to=${to}`);
+    if(!r||r.s!=='ok') return null;
+    return r;
+  }catch(e){return null;}
+}
+async function cgMarket(id,days){
+  try{
+    const r=await fetch(`https://api.coingecko.com/api/v3/coins/${id}/market_chart?vs_currency=usd&days=${days}&interval=daily`);
     if(!r.ok) return null;
     return r.json();
   }catch(e){return null;}
@@ -1159,35 +1169,60 @@ async function fetchIndex(sym){
     if(q?.c) DATA[sym]={symbol:sym,price:q.c,change:q.d||0,pct:q.dp||0,high:q.h,low:q.l,type:'index'};
   }catch(e){}
 }
+function rangeWindow(rangeKey){
+  const now=Math.floor(Date.now()/1000);
+  const cfg=RANGE_CFG[rangeKey]||RANGE_CFG['1W'];
+  const from=cfg.days==='ytd'?ytdFrom():now-cfg.days*86400;
+  return{from,to:now};
+}
+
 async function fetchHist(sym,rangeKey='1W'){
-  const {range,interval}=RANGE_CFG[rangeKey]||RANGE_CFG['1W'];
   try{
-    const yfSym=YF_MAP[sym]||sym;
-    const d=await yfGet(yfSym,range,interval);
-    const res=d?.chart?.result?.[0];
-    if(!res) return null;
-    const closes=res.indicators.quote[0].close;
-    const ts=res.timestamp;
-    const vols=res.indicators.quote[0].volume||[];
-    const pairs=ts.map((t,i)=>[t,closes[i],vols[i]]).filter(([,c])=>c!=null);
+    const{from,to}=rangeWindow(rangeKey);
+    if(CRYPTOS.includes(sym)){
+      const id=CG_IDS[sym];
+      const days=rangeKey==='YTD'?365:RANGE_CFG[rangeKey]?.days||7;
+      const d=await cgMarket(id,Math.min(days,365));
+      if(!d?.prices?.length) return null;
+      const pairs=d.prices;
+      return{
+        labels:pairs.map(([t])=>new Date(t).toLocaleDateString('en-US',{month:'numeric',day:'numeric'})),
+        prices:pairs.map(([,c])=>+c.toFixed(4)),
+        volumes:d.total_volumes?.map(([,v])=>v)||[],
+      };
+    }
+    const c=await fhCandles(sym,from,to,'D');
+    if(!c) return null;
+    const pairs=c.t.map((t,i)=>[t,c.c[i],c.v?.[i]||0]).filter(([,cl])=>cl!=null);
     return{
       labels:pairs.map(([t])=>new Date(t*1000).toLocaleDateString('en-US',{month:'numeric',day:'numeric'})),
-      prices:pairs.map(([,c])=>+c.toFixed(2)),
-      volumes:pairs.map(([,,v])=>v||0),
+      prices:pairs.map(([,cl])=>+cl.toFixed(2)),
+      volumes:pairs.map(([,,v])=>v),
     };
   }catch(e){return null;}
 }
+
 async function fetchLongHist(sym){
   try{
-    const yfSym=YF_MAP[sym]||sym;
-    const d=await yfGet(yfSym,'1y','1d');
-    const res=d?.chart?.result?.[0];
-    if(!res) return;
-    const closes=res.indicators.quote[0].close;
-    const vols=res.indicators.quote[0].volume||[];
-    const ts=res.timestamp;
-    const pairs=ts.map((t,i)=>[t,closes[i],vols[i]]).filter(([,c])=>c!=null);
-    LONG_HIST[sym]={prices:pairs.map(([,c])=>+c.toFixed(2)),volumes:pairs.map(([,,v])=>v||0)};
+    if(CRYPTOS.includes(sym)){
+      const id=CG_IDS[sym];
+      const d=await cgMarket(id,365);
+      if(!d?.prices?.length) return;
+      LONG_HIST[sym]={
+        prices:d.prices.map(([,c])=>+c.toFixed(4)),
+        volumes:d.total_volumes?.map(([,v])=>v)||[],
+      };
+      return;
+    }
+    const to=Math.floor(Date.now()/1000);
+    const from=to-365*86400;
+    const c=await fhCandles(sym,from,to,'D');
+    if(!c) return;
+    const pairs=c.t.map((t,i)=>[t,c.c[i],c.v?.[i]||0]).filter(([,cl])=>cl!=null);
+    LONG_HIST[sym]={
+      prices:pairs.map(([,cl])=>+cl.toFixed(2)),
+      volumes:pairs.map(([,,v])=>v),
+    };
   }catch(e){}
 }
 async function fetchAnalyst(sym){
@@ -1208,9 +1243,9 @@ async function fetchAnalyst(sym){
 async function fetchEarnings(sym){
   try{
     const today=new Date().toISOString().split('T')[0];
-    const future=new Date(Date.now()+60*864e5).toISOString().split('T')[0];
+    const future=new Date(Date.now()+90*864e5).toISOString().split('T')[0];
     const [hist,up]=await Promise.all([
-      fhGet(`stock/earnings?symbol=${sym}&limit=4`),
+      fhGet(`stock/earnings?symbol=${sym}&limit=6`),
       fhGet(`calendar/earnings?symbol=${sym}&from=${today}&to=${future}`),
     ]);
     EARNINGS[sym]={history:Array.isArray(hist)?hist:[],upcoming:up?.earningsCalendar||[]};
@@ -1820,7 +1855,7 @@ async function renderMarketsTab(rangeKey){
     </div>`;
   }).join('');
 
-  const histData=await Promise.all(INDICES.map(s=>fetchHist(s,rangeKey)));
+  const histData=await Promise.all(INDICES.map(s=>(HIST[s]&&rangeKey==='1W')?Promise.resolve(HIST[s]):fetchHist(s,rangeKey)));
   const valid=INDICES.map((s,i)=>({sym:s,h:histData[i]})).filter(x=>x.h?.prices?.length>=2);
   dc('marketsChart');
   if(valid.length){
@@ -1856,8 +1891,14 @@ async function renderMarketsTab(rangeKey){
 function renderSignals(){
   const grid=document.getElementById('signals-grid');
   const syms=EQUITY_SYMS.filter(s=>DATA[s]&&LONG_HIST[s]);
+  // Show partial results while remaining symbols are still loading
+  const pending=EQUITY_SYMS.filter(s=>DATA[s]&&!LONG_HIST[s]);
+  if(!syms.length&&pending.length){
+    grid.innerHTML=`<div class="loading-wrap" style="grid-column:1/-1"><div class="spinner"></div>Loading 1-year price history for signals (${EQUITY_SYMS.length - pending.length}/${EQUITY_SYMS.length} ready)...</div>`;
+    return;
+  }
   if(!syms.length){
-    grid.innerHTML='<div class="loading-wrap" style="grid-column:1/-1"><div class="spinner"></div>Calculating signals — loading price history...</div>';
+    grid.innerHTML='<div class="loading-wrap" style="grid-column:1/-1"><div class="spinner"></div>Calculating signals — fetching price history...</div>';
     return;
   }
   grid.innerHTML=syms.map(sym=>{
@@ -1947,7 +1988,7 @@ async function renderHeatmap(rangeKey){
     </div>`;
   }).join('');
 
-  const histData=await Promise.all(ALL.map(s=>fetchHist(s,rangeKey)));
+  const histData=await Promise.all(ALL.map(s=>(HIST[s]&&rangeKey==='1W')?Promise.resolve(HIST[s]):fetchHist(s,rangeKey)));
   const valid=ALL.map((s,i)=>({sym:s,h:histData[i]})).filter(x=>x.h?.prices?.length>=2);
   dc('heatmapTrendChart');
   if(valid.length){
@@ -1967,15 +2008,42 @@ async function renderHeatmap(rangeKey){
    EARNINGS TAB
 ══════════════════════════════════════════════ */
 function renderEarnings(){
+  // Build upcoming list from all equity holdings
   const upcoming=[];
   EQUITY_SYMS.forEach(s=>(EARNINGS[s]?.upcoming||[]).forEach(e=>upcoming.push({...e,symbol:s})));
-  upcoming.sort((a,b)=>a.date?.localeCompare(b.date));
-  document.getElementById('earnings-table-wrap').innerHTML=upcoming.length
-    ?`<table class="etable"><thead><tr><th>Symbol</th><th>Date</th><th>EPS Est.</th><th>Quarter</th><th>Days</th></tr></thead><tbody>
-       ${upcoming.map(e=>{const days=daysUntil(e.date);const dc2=days<=3?'urgent':days<=7?'soon':'';
-       return`<tr><td class="sym-td">${e.symbol}</td><td>${fDate(e.date)}</td><td>${e.epsEstimate!=null?'$'+e.epsEstimate:'—'}</td><td>Q${e.quarter||'?'} ${e.year||''}</td><td class="${dc2}">${days!=null?days+'d':'—'}</td></tr>`;
-       }).join('')}</tbody></table>`
-    :'<div style="color:var(--text3);padding:20px;font-size:.78rem">No upcoming earnings in next 60 days.</div>';
+  upcoming.sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+
+  // Also show symbols with NO upcoming date as "TBD"
+  const coveredSyms=new Set(upcoming.map(e=>e.symbol));
+  const tbdSyms=EQUITY_SYMS.filter(s=>!coveredSyms.has(s));
+
+  const upcomingHTML=upcoming.map(e=>{
+    const days=daysUntil(e.date);
+    const dc2=days!=null&&days<=3?'urgent':days!=null&&days<=7?'soon':'';
+    const timing=e.hour==='amc'?'After Close':e.hour==='bmo'?'Before Open':'';
+    return`<tr>
+      <td class="sym-td">${e.symbol}</td>
+      <td>${fDate(e.date)}${timing?`<div style="font-size:.58rem;color:var(--text3);margin-top:1px">${timing}</div>`:''}</td>
+      <td>${e.epsEstimate!=null?'$'+e.epsEstimate:'—'}</td>
+      <td>${e.revenueEstimate!=null?fVol(e.revenueEstimate):'—'}</td>
+      <td>Q${e.quarter||'?'} ${e.year||''}</td>
+      <td class="${dc2}">${days!=null?days+'d':'—'}</td>
+    </tr>`;
+  }).join('');
+
+  const tbdHTML=tbdSyms.map(s=>`<tr>
+    <td class="sym-td">${s}</td>
+    <td style="color:var(--text3)">TBD / Not Announced</td>
+    <td>—</td><td>—</td><td>—</td><td style="color:var(--text3)">—</td>
+  </tr>`).join('');
+
+  document.getElementById('earnings-table-wrap').innerHTML=`
+    <table class="etable"><thead><tr>
+      <th>Symbol</th><th>Date</th><th>EPS Est.</th><th>Rev Est.</th><th>Quarter</th><th>Days</th>
+    </tr></thead><tbody>
+      ${upcomingHTML||''}${tbdHTML}
+    </tbody></table>
+    ${!upcomingHTML?'<div style="color:var(--text3);padding:12px;font-size:.73rem">No confirmed dates found in next 90 days — showing TBD for remaining holdings.</div>':''}`;
 
   const epSyms=EQUITY_SYMS.filter(s=>EARNINGS[s]?.history?.length);
   if(epSyms.length){
@@ -2242,7 +2310,8 @@ function renderSectorGrid(rangeKey){
 
 async function renderSectorChart(rangeKey){
   sectorTrendRange=rangeKey;
-  const histData=await Promise.all(SECTOR_ETFS.map(s=>fetchHist(s,rangeKey)));
+  // Use cached hist if rangeKey matches, else re-fetch
+  const histData=await Promise.all(SECTOR_ETFS.map(s=>(HIST[s]&&rangeKey==='1W')?Promise.resolve(HIST[s]):fetchHist(s,rangeKey)));
   const valid=SECTOR_ETFS.map((s,i)=>({sym:s,h:histData[i]})).filter(x=>x.h?.prices?.length>=2);
   dc('sectorChart');
   if(!valid.length)return;
@@ -2257,7 +2326,7 @@ async function renderSectorChart(rangeKey){
   });
 
   // VIX line chart
-  const vixHist=await fetchHist('VIX',rangeKey);
+  const vixHist=(HIST['VIX']&&rangeKey==='1W')?HIST['VIX']:await fetchHist('VIX',rangeKey);
   dc('vixChart');
   if(vixHist?.prices){
     CHARTS['vixChart']=new Chart(document.getElementById('vixChart'),{
@@ -2434,7 +2503,7 @@ function showView(view){
   document.querySelector(`[data-view="${view}"]`)?.classList.add('active');
   document.getElementById('scroll-area').scrollTo(0,0);
   activeView=view;
-  if(view==='heatmap'&&!CHARTS['heatmapTrendChart'])renderHeatmap(heatmapRange);
+  if(view==='heatmap')renderHeatmap(heatmapRange);
   if(view==='earnings')renderEarnings();
   if(view==='news')renderNewsTab();
   if(view==='markets')renderMarketsTab(marketsRange);
@@ -2546,11 +2615,20 @@ async function loadAll(){
     ...PEER_SYMS.map(fetchPeerNews),
   ]);
 
-  // Long history for signals (parallel, best effort)
-  await Promise.allSettled(EQUITY_SYMS.map(fetchLongHist));
+  // Long history for signals + 52W range (parallel)
+  await Promise.allSettled([
+    ...EQUITY_SYMS.map(fetchLongHist),
+    ...PEER_SYMS.map(s=>fetchLongHist(s).then(()=>{})),
+  ]);
 
-  // Short history for sparklines
-  await Promise.allSettled(ALL.map(s=>fetchHist(s,'1W').then(h=>{if(h)HIST[s]=h;})));
+  // Short history for sparklines + pre-cache sector/index/peer charts
+  await Promise.allSettled([
+    ...ALL.map(s=>fetchHist(s,'1W').then(h=>{if(h)HIST[s]=h;})),
+    ...INDICES.map(s=>fetchHist(s,'1W').then(h=>{if(h)HIST[s]=h;})),
+    ...SECTOR_ETFS.map(s=>fetchHist(s,'1W').then(h=>{if(h)HIST[s]=h;})),
+    ...PEER_SYMS.map(s=>fetchHist(s,'1W').then(h=>{if(h)HIST[s]=h;})),
+    fetchHist('VIX','1W').then(h=>{if(h)HIST['VIX']=h;}),
+  ]);
 
   document.getElementById('last-update').textContent='Updated '+new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
   btn.classList.remove('loading');
