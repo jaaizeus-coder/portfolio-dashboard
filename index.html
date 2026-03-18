@@ -2183,7 +2183,7 @@ async function renderHeatmap(rangeKey){
     </div>`;
   }).join('');
 
-  const histData=await Promise.all(ALL.map(s=>(HIST[s]&&rangeKey==='1W')?Promise.resolve(HIST[s]):fetchHist(s,rangeKey)));
+  const histData=await Promise.all(ALL.map(s=>fetchHist(s,rangeKey)));
   const valid=ALL.map((s,i)=>({sym:s,h:histData[i]})).filter(x=>x.h?.prices?.length>=2);
   dc('heatmapTrendChart');
   if(valid.length){
@@ -2507,7 +2507,7 @@ function renderSectorGrid(rangeKey){
 async function renderSectorChart(rangeKey){
   sectorTrendRange=rangeKey;
   // Use cached hist if rangeKey matches, else re-fetch
-  const histData=await Promise.all(SECTOR_ETFS.map(s=>(HIST[s]&&rangeKey==='1W')?Promise.resolve(HIST[s]):fetchHist(s,rangeKey)));
+  const histData=await Promise.all(SECTOR_ETFS.map(s=>fetchHist(s,rangeKey)));
   const valid=SECTOR_ETFS.map((s,i)=>({sym:s,h:histData[i]})).filter(x=>x.h?.prices?.length>=2);
   dc('sectorChart');
   if(!valid.length)return;
@@ -2522,7 +2522,7 @@ async function renderSectorChart(rangeKey){
   });
 
   // VIX line chart
-  const vixHist=(HIST['VIX']&&rangeKey==='1W')?HIST['VIX']:await fetchHist('VIX',rangeKey);
+  const vixHist=await fetchHist('VIX',rangeKey);
   dc('vixChart');
   if(vixHist?.prices){
     CHARTS['vixChart']=new Chart(document.getElementById('vixChart'),{
