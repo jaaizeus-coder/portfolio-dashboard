@@ -1306,7 +1306,7 @@ async function fhGet(path){
   }catch(e){return null;}
 }
 // Use corsproxy.io to bypass GitHub Pages CORS on Yahoo Finance
-const YF_PROXY='https://corsproxy.io/?url=';
+const YF_PROXY='https://api.allorigins.win/raw?url=';
 async function yfGet(sym,range='5d',interval='1d'){
   try{
     const url=`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?interval=${interval}&range=${range}`;
@@ -2183,7 +2183,7 @@ async function renderHeatmap(rangeKey){
     </div>`;
   }).join('');
 
-  const histData=await Promise.all(ALL.map(s=>fetchHist(s,rangeKey)));
+  const histData=await Promise.all(ALL.map(s=>(HIST[s]&&rangeKey==='1W')?Promise.resolve(HIST[s]):fetchHist(s,rangeKey)));
   const valid=ALL.map((s,i)=>({sym:s,h:histData[i]})).filter(x=>x.h?.prices?.length>=2);
   dc('heatmapTrendChart');
   if(valid.length){
