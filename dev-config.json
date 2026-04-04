@@ -1,0 +1,30 @@
+{
+  "environment": "development",
+  "server": {
+    "port": 8080,
+    "host": "localhost"
+  },
+  "apis": {
+    "finnhub": {
+      "baseUrl": "https://finnhub.io/api/v1",
+      "key": "sandbox",
+      "note": "Upgrade to production key"
+    },
+    "anthropic": {
+      "baseUrl": "https://api.anthropic.com/v1",
+      "key": "",
+      "model": "claude-3-haiku-20240307"
+    }
+  },
+  "features": {
+    "aibrief": false,
+    "realtime": true,
+    "alerts": false
+  },
+  "portfolio": {
+    "equities": ["AAPL","ARKB","BROS","COIN","F","META","NVDA","PLTR","TSLA","FXAIX"],
+    "crypto": ["BTC","ETH","SOL","BNB"],
+    "indices": ["SPY","QQQ","IWM","DIA"],
+    "sectors": ["XLK","XLF","XLV","XLY","XLE","XLI","XLB","XLRE","XLU","XLP","XLC"]
+  }
+}

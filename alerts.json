@@ -1,0 +1,31 @@
+{
+  "alerts": [
+    {
+      "type": "price_move",
+      "symbol": "NVDA",
+      "message": "NVDA surged 8.2% to $187.45",
+      "severity": "high",
+      "price": 187.45,
+      "change_pct": 8.2,
+      "timestamp": "2026-04-03T21:45:30.000Z"
+    },
+    {
+      "type": "volume_spike", 
+      "symbol": "TSLA",
+      "message": "TSLA volume spike: 4.1x normal volume",
+      "severity": "medium",
+      "volume": 89234567,
+      "ratio": 4.1,
+      "timestamp": "2026-04-03T21:32:15.000Z"
+    },
+    {
+      "type": "rsi_oversold",
+      "symbol": "COIN",
+      "message": "COIN RSI oversold: 28.5 (potential buy signal)",
+      "severity": "medium",
+      "rsi": 28.5,
+      "timestamp": "2026-04-03T21:15:45.000Z"
+    }
+  ],
+  "last_updated": "2026-04-03T21:45:30.000Z"
+}
